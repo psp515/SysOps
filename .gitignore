@@ -50,3 +50,9 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+lab1/.idea/misc.xml
+lab1/.idea/modules.xml
+lab1/.idea/vcs.xml
+lab1/.idea/workspace.xml
+lab1/cmake-build-debug/CMakeFiles/clion-Debug-log.txt
+lab1/.idea/lab1.iml
