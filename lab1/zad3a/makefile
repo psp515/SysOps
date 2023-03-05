@@ -22,13 +22,13 @@ main_dynamic: main.c shared
 	$(cc) main.c -o main.out -D dynamic
 
 main_static_test: main_static
-	./main.out < test.txt > report_static.txt
+	./main.out < test.txt > resultsstatic.txt
 
 main_shared_test: main_shared
-	./main.out < test.txt > report_shared.txt
+	./main.out < test.txt > results_shared.txt
 
 main_dynamic_test: main_dynamic
-	./main.out < test.txt > report_dynamic.txt
+	./main.out < test.txt > results_dynamic.txt
 
 clean:
 	rm -Rf build *.out *.so *.o *.a
