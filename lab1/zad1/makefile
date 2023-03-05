@@ -9,7 +9,7 @@ static: dir lib.c
 
 shared: dir lib.c
 	gcc -Wall -g -c -fPIC lib.c -o build/lib.o
-	gcc -Wall -g -shared -o libd.so build/lib.o
+	gcc -Wall -g  -fPIC -shared -o libd.so build/lib.o
 
 clean:
 	rm -Rf build *.out *.so *.o *.a

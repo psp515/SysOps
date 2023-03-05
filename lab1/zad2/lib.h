@@ -1,6 +1,3 @@
-//
-// Created by lukasz on 04.03.23.
-//
 #ifndef lib
 #define lib
 
@@ -35,3 +32,4 @@ void deleteFileData(struct FileDataArray* array, int index);
 void freeFileDataArray(struct FileDataArray* array);
 
 #endif
+
