@@ -1,6 +1,6 @@
 cc = gcc -Wall -g -std=c11
 
-opt_lvl = 1
+opt_lvl = 0
 
 dir:
 	mkdir -p build
@@ -31,6 +31,8 @@ main_shared_test: main_shared
 
 main_dynamic_test: main_dynamic
 	./main.out < test.txt > raport_dynamic_$(opt_lvl).txt
+
+test: main_dynamic_test main_shared_test main_static_test
 
 clean:
 	rm -Rf build *.out *.so *.o *.a
