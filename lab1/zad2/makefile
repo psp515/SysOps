@@ -1,4 +1,4 @@
-cc = gcc -Wall -g
+cc = gcc -Wall -g -std=c11
 
 dir:
 	mkdir -p build
@@ -13,10 +13,10 @@ main_static: main.c static
 
 shared: dir lib.c
 	$(cc) -c -fPIC lib.c -o build/lib.o
-	$(cc) -fPIC -shared -o lib.so build/lib.o
+	$(cc) -shared -fPIC -o liblib.so build/lib.o
 
 main_shared: main.c shared
-	$(cc) main.c -lib -L. -o main.out
+	gcc -Wall -g main.c -L. -o main.out -llib -Wl,-rpath=.
 
 main_dynamic: main.c shared
 	$(cc) main.c -o main.out -ldl -D dynamic

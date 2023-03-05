@@ -36,7 +36,21 @@ void log_data(char* operation,
 
 int main()
 {
+    #ifdef dynamic
+    void* handle = dlopen("./lib.so",RTLD_NOW);
+    if(!handle)
+    {
+        fprintf(stderr, "%s", dlerror());
+        exit(1);
+    }
 
+    fileDataArray* (*createFileDataArray)(int) = dlsym(handle,"createFileDataArray");
+    bool (*countFileData)(fileDataArray*, char*) = dlsym(handle,"countFileData");
+    fileData (*getFileData)(fileDataArray*, int) = dlsym(handle,"getFileData");
+    void (*deleteFileData)(fileDataArray*, int) = dlsym(handle,"deleteFileData");
+    void (*freeFileDataArray)(fileDataArray*) = dlsym(handle,"freeFileDataArray");
+
+    #endif
 
     char buffer[256];
 
