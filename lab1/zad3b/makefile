@@ -24,13 +24,13 @@ main_dynamic: main.c shared
 	$(cc) main.c -o main.out -D dynamic -O$(opt_lvl)
 
 main_static_test: main_static
-	./main.out < test.txt > raport_static_$(opt_lvl).txt
+	./main.out < test.txt > report_static_$(opt_lvl).txt
 
 main_shared_test: main_shared
-	./main.out < test.txt > raport_shared_$(opt_lvl).txt
+	./main.out < test.txt > report_shared_$(opt_lvl).txt
 
 main_dynamic_test: main_dynamic
-	./main.out < test.txt > raport_dynamic_$(opt_lvl).txt
+	./main.out < test.txt > report_dynamic_$(opt_lvl).txt
 
 test: main_dynamic_test main_shared_test main_static_test
 
