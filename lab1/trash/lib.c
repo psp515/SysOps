@@ -99,3 +99,28 @@ void freeFileDataArray(struct FileDataArray* array){
     free(array->filesData);
     free(array);
 }
+
+int main(){
+
+    struct FileDataArray* array = createFileDataArray(10);
+
+    countFileData(array, "lib.h");
+    countFileData(array, "lib.c");
+
+    printf("%d\n", array->dataLen);
+
+    struct FileData x = getFileData(array, 0);
+    printf("%d %d %d \n", x.lines,x.words,x.characters);
+
+    x = getFileData(array, 1);
+    printf("%d %d %d \n", x.lines, x.words, x.characters);
+
+    deleteFileData(array, 0);
+
+    printf("%d\n", array->dataLen);
+
+    x = getFileData(array, 0);
+    printf("%d %d %d \n", x.lines, x.words, x.characters);
+
+    //Działa jajks
+}

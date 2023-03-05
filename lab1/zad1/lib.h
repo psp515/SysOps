@@ -4,6 +4,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdbool.h>
 
 #define OTHER_ERROR 0
 #define ALLOCATION_ERROR 1
@@ -20,3 +21,13 @@ struct FileDataArray{
     int maxDataLen;
     int dataLen;
 } fileDataArray;
+
+struct FileDataArray* createFileDataArray(int maxSize);
+
+bool countFileData(struct FileDataArray* array, char* fileName);
+
+struct FileData getFileData(struct FileDataArray* array, int index);
+
+void deleteFileData(struct FileDataArray* array, int index);
+
+void freeFileDataArray(struct FileDataArray* array);
