@@ -1,0 +1,11 @@
+init 10
+count lib.h
+count lib.c
+count main.c
+show 0
+show 1
+show 2
+delete 2 2
+delete 1 1
+delete 0 0
+destroy

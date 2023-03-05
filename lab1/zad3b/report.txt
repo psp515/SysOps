@@ -1,0 +1,16 @@
+-- 0
+
+
+-- 1
+
+
+
+-- 2
+
+
+rt -real time
+ut - user time
+st - system time
+
+Najprawdopodobniej za mało lini kodu jest w plikach daltego ut i st to 0
+wiec nie jestesmy w stanie wyciagnac zadnych wniosków

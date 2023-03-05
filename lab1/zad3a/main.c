@@ -14,12 +14,12 @@
 #include <dlfcn.h>
 #endif
 
-double calculate_time_clocks(clock_t start, clock_t end) {
-    return (double) (end - start) / CLOCKS_PER_SEC;
+long double calculate_time_clocks(clock_t start, clock_t end) {
+    return (long double) (end - start) / CLOCKS_PER_SEC;
 }
 
-double calculate_time_tics(clock_t start, clock_t end) {
-    return (double) (end - start) / sysconf(_SC_CLK_TCK);
+long double calculate_time_tics(clock_t start, clock_t end) {
+    return (long double) (end - start) / sysconf(_SC_CLK_TCK);
 }
 
 void log_data(char* operation,
@@ -29,15 +29,15 @@ void log_data(char* operation,
            clock_t stop)
 {
     printf("---%s---\n", operation);
-    printf("rt: %f\n", calculate_time_clocks(start,stop));
-    printf("ut: %f\n", calculate_time_tics(tms_start.tms_utime,tms_stop.tms_utime));
-    printf("st: %f\n", calculate_time_tics(tms_start.tms_stime,tms_stop.tms_stime));
+    printf("rt: %.10Lf\n", calculate_time_clocks(start,stop));
+    printf("ut: %.10Lf\n", calculate_time_tics(tms_start.tms_utime,tms_stop.tms_utime));
+    printf("st: %.10Lf\n", calculate_time_tics(tms_start.tms_stime,tms_stop.tms_stime));
 }
 
 int main()
 {
     #ifdef dynamic
-    void* handle = dlopen("./diff.so",RTLD_NOW);
+    void* handle = dlopen("./libdiff.so",RTLD_NOW);
     if(!handle)
     {
         fprintf(stderr, "%s", dlerror());
@@ -60,12 +60,14 @@ int main()
     bool initialized = false;
     struct FileDataArray* array;
 
-    clock_t start, stop;
-    struct tms tms_start, tms_stop;
+
 
     while (1) {
 
         fgets(buffer,256,stdin);
+
+        clock_t start, stop;
+        struct tms tms_start, tms_stop;
 
         if(sscanf(buffer,"init %d\n", &a) == 1)
         {
@@ -74,10 +76,10 @@ int main()
 
             array = createFileDataArray(a);
 
-            stop = clock();
             times(&tms_stop);
+            stop = clock();
 
-            log_data("create", tms_start,tms_stop,start, stop);
+            log_data("create", tms_start, tms_stop, start, stop);
 
             initialized = true;
         }
@@ -88,10 +90,10 @@ int main()
 
             countFileData(array, operation);
 
-            stop = clock();
             times(&tms_stop);
+            stop = clock();
 
-            log_data("count", tms_start,tms_stop,start, stop);
+            log_data("count", tms_start, tms_stop,start, stop);
         }
         else if(sscanf(buffer,"show %d\n", &a) == 1 && initialized)
         {
@@ -101,8 +103,8 @@ int main()
             struct FileData data = getFileData(array, a);
             printf("i: %d, l: %d, w: %d, ch: %d\n", a, data.lines, data.words, data.characters);
 
-            stop = clock();
             times(&tms_stop);
+            stop = clock();
 
             log_data("show", tms_start,tms_stop,start, stop);
         }
@@ -116,8 +118,8 @@ int main()
 
                 deleteFileData(array, a);
 
-                stop = clock();
                 times(&tms_stop);
+                stop = clock();
 
                 log_data("delete", tms_start,tms_stop,start, stop);
             }
@@ -129,16 +131,12 @@ int main()
 
             freeFileDataArray(array);
 
-            stop = clock();
             times(&tms_stop);
+            stop = clock();
 
             log_data("destroy", tms_start,tms_stop,start, stop);
 
             break;
-        }
-        else
-        {
-            printf("---- bad command ----");
         }
     }
 
