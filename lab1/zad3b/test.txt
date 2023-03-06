@@ -5,7 +5,7 @@ count main.c
 show 0
 show 1
 show 2
-delete 2 2
-delete 1 1
-delete 0 0
+delete index 2
+delete index 1
+delete index 0
 destroy

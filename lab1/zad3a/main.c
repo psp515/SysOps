@@ -55,12 +55,10 @@ int main()
     char buffer[256];
 
     char operation[256];
-    int a = -1, b = -1;
+    int a = -1;
 
     bool initialized = false;
     struct FileDataArray* array;
-
-
 
     while (1) {
 
@@ -108,21 +106,17 @@ int main()
 
             log_data("show", tms_start,tms_stop,start, stop);
         }
-        else if(sscanf(buffer,"delete %d %d\n", &a, &b) == 2 && initialized)
+        else if(sscanf(buffer,"delete index %d\n", &a) == 1 && initialized)
         {
-            // zakładam że podajemy tutaj index 2 razy aby sprawdzic poprawność (tak jest w instrukcji)
-            if(a == b)
-            {
-                start = clock();
-                times(&tms_start);
+            start = clock();
+            times(&tms_start);
 
-                deleteFileData(array, a);
+            deleteFileData(array, a);
 
-                times(&tms_stop);
-                stop = clock();
+            stop = clock();
+            times(&tms_stop);
 
-                log_data("delete", tms_start,tms_stop,start, stop);
-            }
+            log_data("delete", tms_start,tms_stop,start, stop);
         }
         else if(sscanf(buffer,"%s\n", operation) == 1 && strcmp("destroy", operation) == 0 && initialized)
         {
