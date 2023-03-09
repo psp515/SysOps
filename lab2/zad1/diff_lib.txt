@@ -1,0 +1,1 @@
+Files build/tmp_lib.test and build/lib_main_copy.test are identical

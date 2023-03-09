@@ -1,0 +1,1 @@
+Files build/tmp_sys.test and build/sys_main_copy.test are identical
