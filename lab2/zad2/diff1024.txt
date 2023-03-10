@@ -1,0 +1,1 @@
+Files test.txt and build/output1024.txt are identical

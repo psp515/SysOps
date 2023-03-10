@@ -28,22 +28,23 @@ void log_data(char* operation,
     printf("st: %f\n", calculate_time_tics(tms_start.tms_stime,tms_stop.tms_stime));
 }
 
-void save_reverse_in_file(FILE* writeTo, char* buff, int buff_size)
+void reverse(char* buff, long size)
 {
-    printf("%s", buff);
-    /*for(int i = buff_size-1;i >-1;i++)
+    char *start = buff;
+    char *end = buff + size - 1;
+
+    while (start < end)
     {
-
-        //write by 1 char (in instruction it is specified only about reading file)
-        //char tmp[1];
-        //tmp[0] =  buff[i];
-        //fwrite(tmp, 1, 1,writeTo);
-    }*/
+        char tmp = *start;
+        *start++ = *end;
+        *end-- = tmp;
+    }
 }
-
 
 int main(int n, char** args)
 {
+    /*Ten sam program dla bloku wielkosci 1 i 1024 ale inne parametry wywołania!! */
+
     if(n != 4)
     {
         printf("Invalid number of arguments.");
@@ -58,16 +59,16 @@ int main(int n, char** args)
 
     if(access(args[2], F_OK) != -1)
     {
-        printf("File to reverse to exist(it should not because could override valid file).");
+        printf("File to reverse to exist(it should not because program could override valid file).");
         return -1;
     }
 
     char* end;
-    int block_size = strtol(args[3],&end,10);
+    long block_size = strtol(args[3],&end,10);
 
-    if((*end != '\0' || isspace(*end)) && (block_size < 0 || block_size > 2048))
+    if((*end != '\0' || isspace(*end)) && (block_size < 0 || block_size > 2049))
     {
-        printf("Invalid block size.");
+        printf("Invalid block size.(should be 0 < block < 2049)");
         return -1;
     }
 
@@ -96,35 +97,22 @@ int main(int n, char** args)
 
     fseek(readFrom, 0L, SEEK_END);
     long size = ftell(readFrom);
+    fseek(readFrom, 0L, SEEK_SET);
+
     char buffer[block_size];
 
-    fseek(readFrom, -1L, SEEK_END);
+    for(long i = size - block_size; i >= 0; i -= block_size) {
+        fseek(readFrom, i, SEEK_SET);
+        fread(buffer, sizeof(char), block_size, readFrom);
+        reverse(buffer, block_size);
+        fwrite(buffer, sizeof(char), block_size, writeTo);
+    }
 
-    while(size > 0)
-    {
-        if(size < block_size)
-        {
-            fseek(readFrom, 0L, SEEK_SET);
-            fread(buffer,1,size, readFrom);
-
-            printf("%s\n", buffer);
-
-            save_reverse_in_file(writeTo, buffer,size);
-
-            size = 0;
-        }
-        else
-        {
-            long block = -2 * block_size;
-            fseek(readFrom, block, SEEK_CUR);
-            size_t bytesRead = fread(buffer,1,sizeof(buffer), readFrom);
-            size -= bytesRead;
-
-            if(bytesRead == 0)
-                break;
-
-            save_reverse_in_file(writeTo, buffer,block_size);
-        }
+    if(size % block_size != 0) {
+        fseek(readFrom, 0, SEEK_SET);
+        fread(buffer, sizeof(char), size % block_size, readFrom);
+        reverse(buffer, size);
+        fwrite(buffer, sizeof(char), size % block_size, writeTo);
     }
 
 
