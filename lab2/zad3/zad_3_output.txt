@@ -1,0 +1,15 @@
+248 makefile
+0 zad_3_output.txt
+67 test.txt
+783 main.c
+Total bytes: 1098 
+      0 build
+    783 main.c
+    248 makefile
+     67 test.txt
+     74 zad_3_output.txt
+   1172 total
+
+Właściciwe wszystko sie zgadza pownieważ mój program jeszcze nie uwzglednia niepowistałego pliku zad_3_output.txt
+
+Oprócz tego wc sygnalizuje ze build to directory.

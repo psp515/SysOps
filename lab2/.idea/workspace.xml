@@ -40,7 +40,7 @@
     "WebServerToolWindowFactoryState": "false",
     "cf.first.check.clang-format": "false",
     "cidr.known.project.marker": "true",
-    "last_opened_file_path": "/home/lukasz/Documents/GitHub/sysop/lab1",
+    "last_opened_file_path": "/home/lukasz/Documents/GitHub/sysop/lab2/zad4",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
@@ -50,15 +50,15 @@
     "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
-  <component name="RunManager" selected="Makefile Target.clean (1)">
+  <component name="RunManager" selected="Makefile Target.run_test (1)">
     <configuration name="clean (1)" type="MAKEFILE_TARGET_RUN_CONFIGURATION" factoryName="Makefile" temporary="true">
       <makefile filename="$PROJECT_DIR$/zad2/makefile" target="clean" workingDirectory="" arguments="">
         <envs />
       </makefile>
       <method v="2" />
     </configuration>
-    <configuration name="clean" type="MAKEFILE_TARGET_RUN_CONFIGURATION" factoryName="Makefile" temporary="true">
-      <makefile filename="$PROJECT_DIR$/zad1/makefile" target="clean" workingDirectory="" arguments="">
+    <configuration name="clean (2)" type="MAKEFILE_TARGET_RUN_CONFIGURATION" factoryName="Makefile" temporary="true">
+      <makefile filename="$PROJECT_DIR$/zad3/makefile" target="clean" workingDirectory="" arguments="">
         <envs />
       </makefile>
       <method v="2" />
@@ -69,8 +69,8 @@
       </makefile>
       <method v="2" />
     </configuration>
-    <configuration name="run_sys" type="MAKEFILE_TARGET_RUN_CONFIGURATION" factoryName="Makefile" temporary="true">
-      <makefile filename="$PROJECT_DIR$/zad1/makefile" target="run_sys" workingDirectory="" arguments="">
+    <configuration name="run_test (1)" type="MAKEFILE_TARGET_RUN_CONFIGURATION" factoryName="Makefile" temporary="true">
+      <makefile filename="$PROJECT_DIR$/zad3/makefile" target="run_test" workingDirectory="" arguments="">
         <envs />
       </makefile>
       <method v="2" />
@@ -83,11 +83,11 @@
     </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="Makefile Target.run_test (1)" />
+        <item itemvalue="Makefile Target.clean (2)" />
         <item itemvalue="Makefile Target.clean (1)" />
         <item itemvalue="Makefile Target.run_test" />
         <item itemvalue="Makefile Target.compare" />
-        <item itemvalue="Makefile Target.clean" />
-        <item itemvalue="Makefile Target.run_sys" />
       </list>
     </recent_temporary>
   </component>
@@ -102,7 +102,7 @@
       <workItem from="1678353276763" duration="708000" />
       <workItem from="1678373157295" duration="6396000" />
       <workItem from="1678444853216" duration="718000" />
-      <workItem from="1678445594807" duration="5958000" />
+      <workItem from="1678445594807" duration="8422000" />
     </task>
     <servers />
   </component>
