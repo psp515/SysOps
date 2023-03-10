@@ -1,0 +1,27 @@
+64 test/testito1.txt
+64 test/test2/testito4.txt
+64 test/test2/testito3.txt
+64 test/test2/testito1.txt
+64 test/test2/testito2.txt
+64 test/test1/testito4.txt
+64 test/test1/testito3.txt
+64 test/test1/testito1.txt
+64 test/test1/testito2.txt
+Total bytes: 576 
+      0 test
+     64 test/testito1.txt
+      0 test/test2
+     64 test/test2/testito4.txt
+     64 test/test2/testito3.txt
+     64 test/test2/testito1.txt
+     64 test/test2/testito2.txt
+      0 test/test1
+     64 test/test1/testito4.txt
+     64 test/test1/testito3.txt
+     64 test/test1/testito1.txt
+     64 test/test1/testito2.txt
+    576 total
+
+Wsyzstko sie zgadza, pierwsze wywołanie mojej funkcji później wc.64 test/testito1.txt
+
+

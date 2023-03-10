@@ -1,4 +1,5 @@
 cc = gcc -Wall -g -std=c11
+dir_path = test
 
 dir:
 	mkdir -p build
@@ -9,5 +10,5 @@ clean:
 run_test: dir
 	$(cc) -c main.c -o build/main.o
 	$(cc) build/main.o -o build/main.out
-	./build/main.out >> zad_3_output.txt
-	wc --bytes * >> zad_3_output.txt
+	./build/main.out $(dir_path) >> zad_4_output.txt
+	find $(dir_path) | xargs wc --bytes >> zad_4_output.txt

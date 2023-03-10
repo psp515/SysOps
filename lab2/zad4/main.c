@@ -6,36 +6,34 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <ftw.h>
 
-int main()
+long long bytes = 0;
+
+int process(const char* path, const struct stat* data, int flag)
 {
-    DIR* dir = opendir(".");
-    struct dirent *dir_element = readdir(dir);
-
-    long long total_bytes = 0;
-
-
-    while (dir_element != NULL)
+    if(!S_ISDIR(data->st_mode) && flag == FTW_F)
     {
-        struct stat data;
-        int state = stat(dir_element->d_name, &data);
-
-        if(state == -1)
-        {
-            printf("Error reading stat. File %s.", dir_element->d_name);
-            return -1;
-        }
-
-        if(!S_ISDIR(data.st_mode))
-        {
-            total_bytes += data.st_size;
-            printf("%ld %s\n", data.st_size, dir_element->d_name);
-        }
-
-        dir_element = readdir(dir);
+        bytes += data->st_size;
+        printf("%ld %s\n", data->st_size, path);
     }
 
+    return 0;
+}
 
-    printf("Total bytes: %lld \n", total_bytes);
-    closedir(dir);
+int main(int n, char** args) {
+    if (n != 2) {
+        printf("Invalid number of arguments. (should be 2)");
+        return -1;
+    }
+
+    // zrozumiałem treść ze sprawdamy wszystko dlatego 0 (nieograniczona głębokosc do sprawdzenia)
+
+    if(ftw(args[1],process,0) == -1)
+    {
+        printf("FTW Error.(probably invalid path)");
+        return -1;
+    }
+
+    printf("Total bytes: %lld \n", bytes);
 }
