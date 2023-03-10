@@ -1,0 +1,12 @@
+Files build/tmp_lib.test and build/lib_main_copy.test are identical
+Files build/tmp_sys.test and build/sys_main_copy.test are identical
+---Times lib---
+rt: 0.000146
+ut: 0.000000
+st: 0.000000
+---Times sys---
+rt: 0.002905
+ut: 0.000000
+st: 0.000000
+
+Ogólnie nie ma różnic z poleceniem tr. teoretycznie lib jest szybsze od sys (chciaz to rt a nie wiemy jak uzycie st i ut).

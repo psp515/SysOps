@@ -7,7 +7,7 @@
 64 test/test1/testito3.txt
 64 test/test1/testito1.txt
 64 test/test1/testito2.txt
-Total bytes: 576 
+Total bytes: 576
       0 test
      64 test/testito1.txt
       0 test/test2
@@ -22,7 +22,4 @@ Total bytes: 576
      64 test/test1/testito2.txt
     576 total
 
-
-
-
-
+Wsyzstko sie zgadza, pierwsze wywołanie mojej funkcji później wc.
