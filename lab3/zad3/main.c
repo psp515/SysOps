@@ -81,14 +81,14 @@ int main(int n, char** args){
     
     if(n!=3)
     {
-        printf("Invalid number of parameters. (Should be 3)");
+        printf("Invalid number of parameters. (Should be 3 got %d)",n);
         exit(-1);
     }
     struct stat st;
 
     if(stat(args[1], &st) != 0 || !S_ISDIR(st.st_mode))
     {
-        printf("Route to directory should be first argument.");
+        printf("Valid route to directory should be first argument got %s", args[1]);
         exit(-1);
     }
 
