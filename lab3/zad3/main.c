@@ -1,13 +1,13 @@
 #include <string.h>
-#include <sys/resource.h>
 #include <sys/stat.h>
-#include <sys/types.h>
 #include <sys/wait.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <dirent.h>
+#include <limits.h>
 
+#define MAX_PATTER_LEN 256
 
 void check_directory(char * dir_path, char* pattern)
 {
@@ -20,31 +20,28 @@ void check_directory(char * dir_path, char* pattern)
     }
 
     struct dirent *dir_element = readdir(act_dir);
+    struct stat data;
 
     while (dir_element != NULL)
     {
-
-        struct stat data;
-        int status = stat(dir_element->d_name, &data);
-
-        int n = strlen(dir_path) + strlen(dir_element->d_name);
-        char new_path[n];
-        snprintf(new_path, n, "%s/%s", dir_path, dir_element->d_name);
+        char new_path[PATH_MAX];
+        snprintf(new_path, PATH_MAX, "%s/%s", dir_path, dir_element->d_name);
+        int status = stat(new_path, &data);
 
         if(status == -1)
         {
             perror("Error reading file");
-            printf(dir_path);
-            printf(dir_element->d_name);
             exit(1);
         }
         else if(S_ISDIR(data.st_mode))
         {
-            if (strcmp(dir_element->d_name, ".") == 0 || strcmp(dir_element->d_name, "..") == 0) 
+            if (strcmp(dir_element->d_name, ".") == 0 || strcmp(dir_element->d_name, "..") == 0)
+            {
+                dir_element = readdir(act_dir);
                 continue;
+            }
 
-            __pid_t process_id = fork();
-
+            pid_t process_id = fork();
             if(process_id == 0)
             {
                 check_directory(new_path, pattern);
@@ -61,18 +58,18 @@ void check_directory(char * dir_path, char* pattern)
                 exit(3);
             }
 
-            char buff[strlen(pattern)];
+            char buff[MAX_PATTER_LEN];
 
             fread(buff, 1, sizeof(buff), file);
 
-            if(strcmp(pattern, buff) == 0)
+            if(strncmp(pattern, buff, strlen(pattern)) == 0)
             {
                 printf("Route: %s, pid: %d\n", new_path, getpid());
+                fflush(NULL);
             }
 
             fclose(file);
         }
-
 
         dir_element = readdir(act_dir);
     }
