@@ -1,0 +1,3 @@
+./main.outtest1.txt
+testt1
+test.txt

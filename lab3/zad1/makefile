@@ -4,7 +4,7 @@ n = 3
 dir:
 	mkdir -p build
 
-run_sys: dir main.c
+run: dir main.c
 	$(cc) -c main.c -o build/main.o
 	$(cc) build/main.o -o main.out
 	./main.out $(n) > output.txt
