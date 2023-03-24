@@ -1,3 +1,16 @@
+Opcja handler:
+- handler jest dziedziczony do dziecka poprzez fork
 
+Opcja Ignore:
+- dziedziczona przez fork
+- dziedziczona przez exec
+- ignore nie dodaje sygnałów do oczekiwanych
 
+Opcja mask:
+- fork sygnał jest widoczny jako oczekiwany
+- exec sygnał jest widoczny jako oczekiwany
+
+Opcja Pending:
+- fork sygnał nie jest widoczny jako oczekiwany
+- exec sygnał nie jest widoczny jako oczekiwany
 

@@ -56,6 +56,6 @@ int main()
         sleep(3);
     }
 
-    printf("SIG_QUIT: %d, SIG_INT: %d, SIG_CHLD %d\n",quit_count, int_count, usr_count);
+    printf("SIG_QUIT: %d, SIG_INT: %d, SIG_USR %d\n",quit_count, int_count, usr_count);
 
 } 

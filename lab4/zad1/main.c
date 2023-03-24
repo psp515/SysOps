@@ -3,11 +3,11 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
-#include <wait.h>
+#include <sys/types.h>
 
 void handler(int signal)
 {   
-    printf("Received %d", signal);
+    printf("Received %d\n", signal);
 }
 
 void is_pending(){
@@ -51,7 +51,7 @@ int main(int n, char** args)
         exit(1);
     }
     
-    printf("Raise in parent.");
+    printf("Raise in parent.\n");
     raise(SIGUSR1);
     is_pending();
 
@@ -59,15 +59,15 @@ int main(int n, char** args)
 
     if(pid == -1)
     {
-        perror("Failed to fork");
+        perror("Failed to fork\n");
         exit(1);
     }
     else if (pid == 0)
     {
-        print("Child");
+        printf("Child\n");
         if(strcmp(args[1], "pending") != 0)
         {
-            printf("Raise in child.");
+            printf("Raise in child.\n");
             raise(SIGUSR1);
         }
         
@@ -79,7 +79,7 @@ int main(int n, char** args)
 
             if(x == -1)
             {
-                printf("Exec error.");
+                printf("Exec error.\n");
                 exit(1);
             }
         }

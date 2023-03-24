@@ -14,7 +14,7 @@ void is_pending(){
 
 int main(int argc, char** argv)
 {
-    printf("Exec");
+    printf("\nExec\n");
     is_pending();
 
     raise(SIGUSR1);
