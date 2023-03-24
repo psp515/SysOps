@@ -11,4 +11,4 @@ run: dir main.c main_test.c
 	./main.out pending 
 
 clean:
-	rm -Rf build *.out *.so *.o *.a *.test
+	rm -Rf build *.out *.so *.o *.a *.test main_test

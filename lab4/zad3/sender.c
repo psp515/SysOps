@@ -51,7 +51,8 @@ int main(int n, char **args) {
     for(int i = 0; i < n-2; i++) {
         int mode = modes[i];
         printf("S: Sending mode %d\n", mode);
-        send_signal(catcher_pid, SIGUSR1, mode);
+        send_signal(catcher_pid,
+                    , mode);
         printf("S: Signal send %d\n", mode);
         sigsuspend(&act.sa_mask);
         printf("S: Signal received %d\n", mode);
