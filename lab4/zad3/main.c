@@ -1,5 +1,5 @@
-#include <stdio.h>
 #include <signal.h>
+#include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -11,9 +11,9 @@ static int mode = 0;
 
 void print_numbers()
 {
-    for (int i = 1; i <= 100; i++) {
+    for (int i = 1; i <= 100; i++) 
         printf("%d\n", i);
-    }
+    
 }
 
 void print_time()
@@ -36,23 +36,32 @@ void handler(int sig, siginfo_t* info, void* context)
 
     printf("Signal: %d\n", sig);
     printf("From Pid: %d\n", info->si_pid);
-    int mode = info->si_value.sival_int;
-    printf("Mode: %d\n", mode);
+    int new_mode = info->si_value.sival_int;
+    printf("Mode: %d\n", new_mode);
+
+    requests += 1;
+
+    mode = new_mode;
+
+    if(mode == 1)
+        print_numbers();
+    else if (mode == 2)
+        print_time();
+    else if(mode == 3)
+        printf("Received data: %d", requests);
+    else if(mode == 5)
+        off();
 
     kill(info->si_pid, SIGUSR1);
-    
-    // sender
-
-    //
-
 }
 
 int main()
 {
+    pid_t pid = getpid();
     printf("Catcher started.\n");
-    printf("Pid: %d\n", getpid());
+    printf("Pid: %d\n", pid);
 
-    //execl("","", NULL);
+    execl("./sender", "sender", pid, NULL);
 
     struct sigaction act;
     act.sa_flags = SA_SIGINFO;
