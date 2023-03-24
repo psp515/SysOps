@@ -1,4 +1,4 @@
-cc = gcc -Wall -g -std=c11
+cc = gcc -Wall -g
 
 dir:
 	mkdir -p build
@@ -11,4 +11,4 @@ run: dir main.c sender.c
 	./main
 
 clean:
-	rm -Rf build *.out *.so *.o *.a *.test
+	rm -Rf build *.out *.so *.o *.a *.test sender main
