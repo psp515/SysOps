@@ -1,0 +1,23 @@
+
+---Integral data---
+rt: 0.0003240000
+Sum: -40.2948330000
+Processes: 1
+Interval size: 0.0000000100
+---Integral data---
+rt: 0.0004290000
+Sum: 6.1511240000
+Processes: 2
+Interval size: 0.0000000100
+---Integral data---
+rt: 0.0008750000
+Sum: 7.0126910000
+Processes: 5
+Interval size: 0.0000000100
+---Integral data---
+rt: 0.0019410000
+Sum: 7.1327730000
+Processes: 10
+Interval size: 0.0000000100
+
+Ciekawe że sumy się różnią.
