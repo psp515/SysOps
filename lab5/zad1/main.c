@@ -9,27 +9,29 @@ int main(int n, char** args)
     if(n == 2)
     {
         char command[MAX_LINE_LENGTH];
+
         if(strcmp(args[1], "data") == 0)
-        {
-            snprintf(command, MAX_LINE_LENGTH, "mail -H | sort -k 2n | less");
-        }
+            snprintf(command, BUFSIZ, "mail -H | sort -k 6");
         else if(strcmp(args[1], "nadawca") == 0)
-        {
-            snprintf(command, MAX_LINE_LENGTH, "mail -H | sort -k 2M | less");
-        }
+            snprintf(command, BUFSIZ, "mail -H | sort -k 3");
         else
         {
             printf("Inalid argument should be data or nadawca.\n");
             exit(-1);
         }
 
-        FILE* mails = popen("", "r");
+        FILE* mails = popen(command, "w");
 
+        fputs("exit", mails);
         pclose(mails);
     }
     else if(n == 4)
     {
-
+        char buffer[BUFSIZ];
+        snprintf(buffer, BUFSIZ, "mail -s %s %s", args[2], args[1]);
+        FILE* new_mail = popen(buffer, "w");
+        fputs(args[3], new_mail);
+        pclose(new_mail);
     }
     else
     {
