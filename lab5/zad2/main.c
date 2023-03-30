@@ -110,6 +110,9 @@ int main(int n, char** args)
         sum += parse(buffer);
     }
 
+    for(int i =0; i < processes; i++)
+        close(descriptors[i][0]);
+
     stop = clock();
 
     printf("---Integral data---\n");

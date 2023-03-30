@@ -18,5 +18,3 @@ rt: 0.0019610000
 Sum: 7.1327730000
 Processes: 10
 Interval size: 0.0000000100
-
-Ciekawe że sumy się aż tak różnią.
