@@ -5,29 +5,15 @@
 #include <sys/times.h>
 #include <time.h>
 #include <unistd.h>
+#include <sys/stat.h>
+#include <limits.h>
+#include <fcntl.h>
 
-#define BUFF 1024
-
-double f(double x)
-{
-    return 4 / (x * x - 1);
-}
+#define BUFF PIPE_BUF
+#define FIFO_PATH "/tmp/fifo.txt"
 
 long double calculate_time_clocks(clock_t start, clock_t end) {
     return (long double) (end - start) / CLOCKS_PER_SEC;
-}
-
-double integral(double start, double stop, double interval)
-{
-    double sum = 0;
-
-    for(double x = start; x < stop;)
-    {
-        sum += interval * f(x);
-        x += interval;
-    }
-
-    return sum;
 }
 
 double parse(char* string)
@@ -60,21 +46,15 @@ int main(int n, char** args)
         printf("%s is not a valid number.\n", args[2]);
         return 1;
     }
+
     clock_t start, stop;
-
     start = clock();
-
     char buffer[BUFF];
-    int descriptors[processes][2];
+
+    mkfifo(FIFO_PATH, 0666);
 
     for(int i = 0; i < processes; i++)
     {
-        if(pipe(descriptors[i]) == -1)
-        {
-            perror("Pipe error");
-            exit(1);
-        }
-
         pid_t pid = fork();
         if(pid == -1)
         {
@@ -83,39 +63,50 @@ int main(int n, char** args)
         }
         else if(pid == 0)
         {
-            close(descriptors[i][0]);
+            char arg1[BUFF], arg2[BUFF],arg3[BUFF];
             double start = i * processes;
             double stop = (i+1) * processes;
-            double area = integral(start, stop, interval);
 
-            memset(buffer, 0, sizeof(buffer));
-            size_t written_size = snprintf(buffer, BUFF, "%f", area);
-            write(descriptors[i][1],buffer, written_size);
+            snprintf(arg1, BUFF, "%.15lf", start);
+            snprintf(arg2, BUFF, "%.15lf", stop);
+            snprintf(arg3, BUFF, "%.15lf", interval);
 
-            exit(0);
+            execl("./calc", "calc", FIFO_PATH, arg1, arg2, arg3, NULL);
+            printf("Exec error");
+            exit(1);
         }
-        else
-            close(descriptors[i][1]);
-
     }
-
-    while(wait(NULL) > 0){}
 
     double sum = 0;
 
-    for(int i = 0; i < processes; i++)
+    // Already awaits for data
+
+    int descriptor = open(FIFO_PATH, O_RDONLY);
+
+    for(int i = 0; i < processes;)
     {
         memset(buffer, 0, sizeof(buffer));
-        read(descriptors[i][0], buffer, BUFF);
-        sum += parse(buffer);
+        read(descriptor, buffer, BUFF);
+
+        char *token = strtok(buffer, "\n");
+
+        while (token != NULL)
+        {
+            sum += parse(token);
+            token = strtok(NULL, " ");
+            i++;
+        }
     }
+
+    close(descriptor);
+    remove(FIFO_PATH);
 
     stop = clock();
 
     printf("---Integral data---\n");
     printf("rt: %.10Lf\n", calculate_time_clocks(start,stop));
     printf("Sum: %.10lf\n", sum);
-    printf("Processes: %d\n", processes);
+    printf("Programs started: %d\n", processes);
     printf("Interval size: %.10lf\n", interval);
 
     exit(0);

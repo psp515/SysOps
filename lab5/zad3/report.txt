@@ -1,0 +1,23 @@
+Ogólna uwaga maksymalnie 1 na 14 miejscu po przecinku inaczej program nic nie zrobi
+Czasem zwraca error ale wtedy trzeba ponownie właczyć i działa (problem z forkiem czy cos chyba)
+
+---Integral data---
+rt: 0.0005160000
+Sum: -10437104.6566729993
+Programs started: 1
+Interval size: 0.0000100000
+---Integral data---
+rt: 0.0006530000
+Sum: -801.5494380000
+Programs started: 2
+Interval size: 0.0000001000
+---Integral data---
+rt: 0.0180590000
+Sum: -800.6878700000
+Programs started: 5
+Interval size: 0.0000001000
+---Integral data---
+rt: 0.0286560000
+Sum: -800.5677890000
+Programs started: 10
+Interval size: 0.0000001000
