@@ -52,8 +52,7 @@ int main(int argc, char *argv[])
     sigdelset(&mask, SIGUSR2);
 
     action.sa_mask = mask;
-
-    sigprocmask(SIG_SETMASK, &unblocked_set, NULL);
+    sigprocmask(SIG_SETMASK, &mask, NULL);
 
     int child = fork();
     if (child == 0)

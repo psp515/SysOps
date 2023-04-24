@@ -5,7 +5,7 @@
 #define MSGMAXLEN 1024
 #define MAXDATE 20
 #define FIRST_ID 0
-#define PATH getenv("HOME")
+#define PATH "/SERV"
 
 typedef enum{
     STOP = 1,
@@ -18,10 +18,9 @@ typedef enum{
 
 struct msgData{
     long mtype;
-    char buffer[MSGMAXLEN+1];
     int client_id;
     int to_id;
-    int new_client_queue;
+    char buffer[MSGMAXLEN+1];
     char date[MAXDATE];
 } msgData;
 

@@ -30,14 +30,13 @@ int main() {
 
         waitpid(child, &status, WNOHANG);
 
-        if(status == 0)
-            signal(child, SIGKILL);
+        signal(child, SIGKILL);
 
         int new_status = waitpid(child, &status, 0);
 
         if(new_status != -1)
         {
-            retval = WIFEXITED(child);
+            retval = WEXITSTATUS(child);
             printf("Finished child: %d\n", child);
             printf("Status: %d\n", status);
             printf("RetVal: %d\n", retval);
