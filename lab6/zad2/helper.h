@@ -5,7 +5,7 @@
 #define MSGMAXLEN 1024
 #define MAXDATE 20
 #define FIRST_ID 0
-#define PATH "/SERV"
+#define SERVER_NAME "/SERV"
 
 typedef enum{
     STOP = 1,

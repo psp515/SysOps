@@ -3,21 +3,15 @@
 //
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/msg.h>
 #include <errno.h>
 #include <string.h>
-#include <sys/ipc.h>
 #include <signal.h>
 #include "helper.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <fcntl.h>
-#include <sys/stat.h>
 #include <mqueue.h>
 
 
-int clients[MAXCLIENTS];
+char clients[MAXCLIENTS][100];
 int newId = FIRST_ID;
 mqd_t serverQueue;
 long SIZE;
@@ -39,33 +33,68 @@ int parse(char* string)
 
 void handleAll(struct msgData* buff)
 {
-
+    for(int i =0; i < newId; i++)
+    {
+        if(strcmp(clients[i], "") != 0)
+        {
+            mqd_t tmp = mq_open(clients[i], O_RDWR);
+            mq_send(tmp, (char *)buff,SIZE,0);
+            mq_close(tmp);
+        }
+    }
 }
 void handleOne(struct msgData* buff)
 {
-
+    if(strcmp(clients[buff->to_id], "") != 0)
+    {
+        mqd_t tmp = mq_open(clients[buff->to_id], O_RDWR);
+        mq_send(tmp, (char *)buff,SIZE,0);
+        mq_close(tmp);
+    }
 }
+
 void handleList()
 {
     for(int i = 0; i < newId; i++)
-        if(clients[i] != 0)
-            printf("id: %d, q_key: %d\n", i, clients[i]);
-}
-void handleStop(struct msgData* buff)
-{
-
+        if(strcmp(clients[i], "") != 0)
+            printf("id: %d, q_key: %s\n", i, clients[i]);
 }
 void handleInit(struct msgData* buff)
 {
-}
+    mqd_t tmp = mq_open(buff->buffer, O_RDWR);
+    struct msgData* response = malloc(SIZE);
+    response->mtype = INIT;
 
+    if(newId >= MAXCLIENTS)
+    {
+        response->client_id = -1;
+        mq_send(tmp, (char *)response,SIZE,0);
+        mq_close(tmp);
+    }
+
+    strcpy(clients[newId], buff->buffer);
+    response->client_id = newId;
+    printf("New client id: %d\n",response->client_id);
+    mq_send(tmp, (char *)response,SIZE,0);
+    mq_close(tmp);
+    newId = newId + 1;
+}
+void handleStop(struct msgData* buff)
+{
+    int id = buff->client_id;
+
+    if (id < 0 || id >= MAXCLIENTS)
+        return;
+
+    strcpy(clients[id], "");
+}
 void stopServer()
 {
-    struct msgData *data;
+    struct msgData *data = malloc(SIZE);
     data->mtype = SERVER_DOWN;
 
     for(int i = 0; i < newId; i++)
-        if(clients[i] != -1)
+        if(strcmp(clients[i], "") != 0)
         {
             mqd_t client = mq_open(clients[i], O_RDWR);
             mq_send(client, (char *)data, SIZE, 0);
@@ -79,24 +108,23 @@ void stopServer()
 void exitHandler()
 {
     printf("Server shut down\n");
-    exit(0);
 }
 
 int main()
 {
-    for(int i =0; i < MAXCLIENTS;i++)
-        clients[i] = -1;
+    for(int i = 0; i < MAXCLIENTS; i++)
+        strcpy(clients[i], "");
 
     SIZE = sizeof (msgData);
 
-    struct mq_attr attr
+    struct mq_attr attr;
     attr.mq_flags = 0;
     attr.mq_maxmsg = 10;
     attr.mq_msgsize = SIZE;
     attr.mq_curmsgs = 0;
 
-    mq = mq_open(QUEUE_NAME, O_CREAT | O_RDWR, 0666, &attr);
-    if (mq == -1) {
+    serverQueue = mq_open(SERVER_NAME, O_CREAT | O_RDWR, 0666, &attr);
+    if (serverQueue == -1) {
         perror("mq_open");
         exit(1);
     }
@@ -114,7 +142,7 @@ int main()
 
         if(status == -1)
         {
-            printf("Receive error.")
+            printf("Received error.");
             exit(-1);
         }
 

@@ -17,6 +17,11 @@ run_client2: dir client.c
 	$(cc) -c client.c -o build/client.o
 	$(cc) build/client.o -o build/client.out
 	./build/client.out
+
+run_client3: dir client.c
+	$(cc) -c client.c -o build/client.o
+	$(cc) build/client.o -o build/client.out
+	./build/client.out
 	
 clean:
 	rm -Rf build *.o *.so *.a *.sa *.out
