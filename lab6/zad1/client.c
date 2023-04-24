@@ -104,7 +104,8 @@ int main()
     int server_k = ftok(PATH, 1);
     server_q = msgget(server_k, IPC_PRIVATE);
 
-    key = ftok(PATH, (rand() % 1024) + 10);
+    srand(time(NULL));
+    key = ftok(PATH, (rand() % 100) + 1);
     queue = msgget(key, IPC_CREAT | 0666);
 
     signal(SIGINT, sendStop);
@@ -121,7 +122,7 @@ int main()
         exit(1);
     }
     client_id = initData->client_id;
-    printf("Connected To Server with %d\n", client_id);
+    printf("Connected To Server with %d.\n", client_id);
 
     char command[16];
     char id[128];
@@ -132,17 +133,20 @@ int main()
     {
         // from Server
         struct msgData * tmpMessage = malloc(sizeof (msgData));
-        while (msgrcv(queue, tmpMessage, SIZE, 0, IPC_NOWAIT) >=0)
+        while (msgrcv(queue, tmpMessage, SIZE, 0, IPC_NOWAIT) >= 0)
         {
-            if(tmpMessage->mtype == STOP)
+            if(tmpMessage->mtype == SERVER_DOWN)
             {
+                tmpMessage->client_id = client_id;
+                tmpMessage->mtype = SERVER_DOWN;
+                msgsnd(server_q, tmpMessage, SIZE, 0);
                 msgctl(queue, IPC_RMID, NULL);
                 exit(0);
             }
 
-            printf("From: %d, Data: %s, Date: %s", tmpMessage->client_id, tmpMessage->buffer, tmpMessage->date);
+            printf("From: %d, Data: %s, Date: %s\n", tmpMessage->client_id, tmpMessage->buffer, tmpMessage->date);
         }
-
+        free(tmpMessage);
 
         // to Server
         printf("Write command:");
@@ -151,22 +155,22 @@ int main()
             int n = sscanf(input, "%s %s %[^\n]s", command, id, message);
             if (n == 1 && strcmp(command, "STOP") == 0)
             {
-                printf("Received STOP command\n");
+                printf("Sending STOP command\n");
                 sendStop();
             }
             else if (n == 1 && strcmp(command, "LIST") == 0)
             {
-                printf("Received LIST command\n");
+                printf("Sending LIST command\n");
                 sendList();
             }
             else if (n == 2 && strcmp(command, "2ALL") == 0)
             {
-                printf("Received 2ALL command with message: %s\n", id);
+                printf("Sending 2ALL command with message: %s\n", id);
                 send2all(id);
             }
             else if (n == 3 && strcmp(command, "2ONE") == 0)
             {
-                printf("Received 2ONE command with message: %s and client ID: %s\n", message, id);
+                printf("Sending 2ONE command with message: %s and client ID: %s\n", message, id);
                 send2one(message, parse(id));
             }
             else

@@ -6,11 +6,34 @@
 #include <sys/ipc.h>
 #include <signal.h>
 #include "helper.h"
+#include "time.h"
 
-client* clients;
+key_t clientsKeys[MAXCLIENTS];
 int newId;
 int serverQueue;
 long SIZE;
+
+void save(struct msgData* message)
+{
+    FILE* logs = fopen("logs.txt", "w");
+    char data[2*MSGMAXLEN];
+
+    switch(message->mtype){
+        case ONE:
+            snprintf(data, sizeof (data),"Type: %ld From id: %d To id: %d date: %s data: %s\n",message->mtype, message->client_id, message->to_id, message->date, message->buffer);
+            fwrite(data,sizeof (char ),sizeof (data),logs);
+            break;
+        case ALL:
+            snprintf(data, sizeof (data),"Type: %ld From id: %d date: %s data: %s\n",message->mtype, message->client_id, message->date, message->buffer);
+            fwrite(data,sizeof (char ),sizeof (data),logs);
+            break;
+        default:
+            snprintf(data, sizeof (data),"Type: %ld From id: %d date: %s\n",message->mtype, message->client_id, message->date);
+            fwrite(data,sizeof (char ),sizeof (data),logs);
+    }
+
+    fclose(logs);
+}
 
 int parse(char* string)
 {
@@ -27,106 +50,115 @@ int parse(char* string)
     return value;
 }
 
-void handleAll(client* clients, struct msgData* buff)
+void handleAll(struct msgData* buff)
 {
-    for(int i = 0; i < newId; i++)
+    for(int i = 0; i < MAXCLIENTS; i++)
     {
-        if(clients[i].status)
+        if(clientsKeys[i] != -1 && buff->client_id != i)
         {
-            int queue = msgget(clients[i].queueKey, 0);
-            msgsnd(queue, buff, SIZE, 0);
+            printf("---%d---\n", i);
+            int tmpQueue = msgget(clientsKeys[i], 0);
+            msgsnd(tmpQueue, buff, SIZE, 0);
         }
     }
 }
 
-void handleOne(client* clients, int newId, struct msgData* buff)
+void handleOne(struct msgData* buff)
 {
     int toId = buff->to_id;
-    for(int i = 0; i < newId; i++)
+    printf("---%d---\n", toId);
+    if(clientsKeys[toId] != -1)
     {
-        if(clients[i].clientID == toId && clients[i].status)
-        {
-            int queue = msgget(clients[i].queueKey, 0);
-            msgsnd(queue, buff, SIZE, 0);
-            return;
-        }
+        int tmpQueue = msgget(clientsKeys[toId], 0);
+        msgsnd(tmpQueue, buff, SIZE, 0);
     }
 }
 
-void handleList(client* clients, int newId)
+void handleList(int newId)
 {
     for(int i = 0;i < newId; i++)
-        printf("id: %d, q_key: %d, status: %d\n", clients->clientID, clients->queueKey, clients->status);
+        if(clientsKeys[i] != -1)
+            printf("id: %d, q_key: %d\n", i, clientsKeys[i]);
 }
 
-void handleStop(client* clients, struct msgData* buff)
+void handleStop(struct msgData* buff)
 {
     int id = buff->client_id;
 
-    if(id > MAXCLIENTS && clients[id].status != -1)
+    if(id > MAXCLIENTS || clientsKeys[id] == -1)
         return;
 
-    clients[id].status = 0;
+    clientsKeys[id] = -1;
 }
 
-void handleInit( client* clients, struct msgData* buff)
+void handleInit(struct msgData* buff)
 {
     int clientQueue = buff->new_client_queue;
+    struct msgData* message = malloc(sizeof (msgData));
+    int tmpQueue = msgget(clientQueue, 0);
+    message->mtype = INIT;
     if(newId >= MAXCLIENTS)
     {
-        struct msgData* message = malloc(sizeof (msgData));
-
-        message->mtype = INIT;
         message->client_id = -1;
-        int queue = msgget(clientQueue, 0);
-        msgsnd(queue, buff, SIZE, 0);
+        msgsnd(tmpQueue, buff, SIZE, 0);
+        free(message);
+        return;
     }
 
-    client newClient = {newId, clientQueue,1};
-    clients[newId] = newClient;
-
-    struct msgData* message = malloc(sizeof (msgData));
-
-    message->mtype = INIT;
+    clientsKeys[newId] = clientQueue;
     message->client_id = newId;
+    printf("--%d --\n", newId);
+    msgsnd(tmpQueue, message, SIZE, IPC_NOWAIT);
+    free(message);
     newId += 1;
-    int queue = msgget(clientQueue, 0);
-    msgsnd(queue, message, SIZE, IPC_NOWAIT);
+    printf("--%d --\n", newId);
 }
 
-void exitHandler()
+void stopServer()
 {
     struct msgData *message = malloc(sizeof (msgData));
+    message->mtype = SERVER_DOWN;
+    message->client_id = -1;
+    time_t now = time(NULL);
+    struct tm* local_time = localtime(&now);
+    strftime(message->date, 19, "%Y-%m-%d", local_time);
+
     for(int i = 0; i < newId; i++)
     {
-        if(clients[i].status)
+        if(clientsKeys[i] != -1)
         {
-            message->mtype = SERVER_DOWN;
-            int queue = msgget(clients[i].queueKey, 0);
+            int queue = msgget(clientsKeys[i], 0);
+            message->to_id = i;
             msgsnd(queue, message, SIZE, 0);
-            msgrcv(serverQueue, message, SIZE, STOP, 0);
+            //msgrcv(serverQueue, message, SIZE, -1, 0);
+
+            save(message);
         }
     }
 
-    free(clients);
     msgctl(serverQueue, IPC_RMID, NULL);
-
+}
+void exitHandler()
+{
     printf("Server shut down\n");
+    exit(0);
 }
 
 int main()
 {
-
     int key = ftok(PATH, 1);
     serverQueue = msgget(key, IPC_CREAT | 0666);
     printf("Server key: %d\n", key);
 
+    atexit(stopServer);
     signal(SIGINT, exitHandler);
 
     struct msgData *data = malloc(sizeof (msgData));
     SIZE = sizeof (msgData) - sizeof (long);
     newId = FIRST_ID;
-    clients = malloc(MAXCLIENTS * sizeof(struct client));
+
+    for(int i =0; i < MAXCLIENTS; i++)
+        clientsKeys[i] = -1;
 
     printf("Server started\n");
 
@@ -137,23 +169,28 @@ int main()
         switch(data->mtype){
             case STOP:
                 printf("Handling STOP\n");
-                handleStop(clients, data);
+                handleStop(data);
+                save(data);
                 break;
             case INIT:
                 printf("Handling INIT\n");
-                handleInit(clients, data);
+                handleInit(data);
+                save(data);
                 break;
             case LIST:
                 printf("Handling LIST\n");
-                handleList(clients, newId);
+                handleList(newId);
+                save(data);
                 break;
             case ONE:
                 printf("Handling ONE\n");
-                handleOne(clients, newId, data);
+                handleOne(data);
+                save(data);
                 break;
             case ALL:
                 printf("Handling ALL\n");
-                handleAll(clients, data);
+                handleAll(data);
+                save(data);
                 break;
         }
     }
