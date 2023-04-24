@@ -10,6 +10,29 @@
 #include <fcntl.h>
 #include <mqueue.h>
 
+void save(struct msgData* message)
+{
+    FILE* logs = fopen("logs.txt", "w");
+    char data[2*MSGMAXLEN];
+
+    switch(message->mtype){
+        case ONE:
+            snprintf(data, sizeof (data),"Type: %ld From id: %d To id: %d date: %s data: %s\n",message->mtype, message->client_id, message->to_id, message->date, message->buffer);
+            fwrite(data,sizeof (char ),sizeof (data),logs);
+            break;
+        case ALL:
+            snprintf(data, sizeof (data),"Type: %ld From id: %d date: %s data: %s\n",message->mtype, message->client_id, message->date, message->buffer);
+            fwrite(data,sizeof (char ),sizeof (data),logs);
+            break;
+        default:
+            snprintf(data, sizeof (data),"Type: %ld From id: %d date: %s\n",message->mtype, message->client_id, message->date);
+            fwrite(data,sizeof (char ),sizeof (data),logs);
+    }
+
+    fclose(logs);
+
+    printf("Log saved\n");
+}
 
 char clients[MAXCLIENTS][100];
 int newId = FIRST_ID;
@@ -35,7 +58,7 @@ void handleAll(struct msgData* buff)
 {
     for(int i =0; i < newId; i++)
     {
-        if(strcmp(clients[i], "") != 0)
+        if(strcmp(clients[i], "") != 0 && buff->client_id != i)
         {
             mqd_t tmp = mq_open(clients[i], O_RDWR);
             mq_send(tmp, (char *)buff,SIZE,0);
@@ -75,7 +98,7 @@ void handleInit(struct msgData* buff)
     strcpy(clients[newId], buff->buffer);
     response->client_id = newId;
     printf("New client id: %d\n",response->client_id);
-    mq_send(tmp, (char *)response,SIZE,0);
+    mq_send(tmp, (char *)response,SIZE,response->mtype);
     mq_close(tmp);
     newId = newId + 1;
 }
@@ -98,16 +121,16 @@ void stopServer()
         {
             mqd_t client = mq_open(clients[i], O_RDWR);
             mq_send(client, (char *)data, SIZE, 0);
-            mq_receive(serverQueue, (char *)data, SIZE, NULL);
+            //mq_receive(serverQueue, (char *)data, SIZE, NULL);
             mq_close(client);
         }
 
     mq_close(serverQueue);
-    exit(0);
 }
 void exitHandler()
 {
     printf("Server shut down\n");
+    exit(0);
 }
 
 int main()
@@ -138,7 +161,7 @@ int main()
 
     while(1)
     {
-        int status =  mq_receive(serverQueue, (char *)message, SIZE, 0);
+        int status = mq_receive(serverQueue, (char *)message, SIZE, 0);
 
         if(status == -1)
         {
@@ -150,22 +173,27 @@ int main()
             case STOP:
                 printf("Handling STOP\n");
                 handleStop(message);
+                save(message);
                 break;
             case INIT:
                 printf("Handling INIT\n");
                 handleInit(message);
+                save(message);
                 break;
             case LIST:
                 printf("Handling LIST\n");
                 handleList();
+                save(message);
                 break;
             case ONE:
                 printf("Handling ONE\n");
                 handleOne(message);
+                save(message);
                 break;
             case ALL:
                 printf("Handling ALL\n");
                 handleAll(message);
+                save(message);
                 break;
         }
     }

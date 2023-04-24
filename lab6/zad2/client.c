@@ -24,31 +24,27 @@ struct tm *local_time;
 
 void send2one(char *value, int id)
 {
-    char date_str[11];
     now = time(NULL);
     local_time = localtime(&now);
-    strftime(date_str, 11, "%Y-%m-%d", local_time);
 
     struct msgData *message = malloc(sizeof (msgData));
     message->mtype = ONE;
     message->client_id = clientId;
     message->to_id = id;
-    strcpy(message->date, date_str);
+    strftime(message->date, 19, "%Y-%m-%d", local_time);
     strcpy(message->buffer, value);
 
     mq_send(serverQueue,(char *)message,SIZE,0);
 }
 void send2all(char *value)
 {
-    char date_str[11];
     now = time(NULL);
     local_time = localtime(&now);
-    strftime(date_str, 11, "%Y-%m-%d", local_time);
 
     struct msgData *message = malloc(sizeof (msgData));
     message->mtype = ALL;
     message->client_id = clientId;
-    strcpy(message->date, date_str);
+    strftime(message->date, 19, "%Y-%m-%d", local_time);
     strcpy(message->buffer, value);
 
 
@@ -56,30 +52,25 @@ void send2all(char *value)
 }
 void sendList()
 {
-    char date_str[11];
     now = time(NULL);
     local_time = localtime(&now);
-    strftime(date_str, 11, "%Y-%m-%d", local_time);
 
     struct msgData *message = malloc(sizeof (msgData));
     message->mtype = LIST;
     message->client_id = clientId;
-    strcpy(message->date, date_str);
+    strftime(message->date, 19, "%Y-%m-%d", local_time);
 
     mq_send(serverQueue,(char *)message,SIZE,0);
 }
 void sendStop()
 {
-    char date_str[11];
     now = time(NULL);
     local_time = localtime(&now);
-    strftime(date_str, 11, "%Y-%m-%d", local_time);
 
     struct msgData *message = malloc(sizeof (msgData));
     message->mtype = STOP;
     message->client_id = clientId;
-    strcpy(message->date, date_str);
-
+    strftime(message->date, 19, "%Y-%m-%d", local_time);
 
     mq_send(serverQueue,(char *)message,SIZE,0);
 
@@ -132,15 +123,23 @@ int main()
     attr.mq_msgsize = SIZE;
     attr.mq_curmsgs = 0;
 
-    queue = mq_open(SERVER_NAME, O_CREAT | O_RDWR, 0666, &attr);
+    queue = mq_open(name, O_CREAT | O_RDWR, 0666, &attr);
     serverQueue = mq_open(SERVER_NAME, O_RDWR);
 
     struct msgData *initData = malloc(SIZE);
     initData->mtype = INIT;
     strcpy(initData->buffer, name);
 
-    mq_send(serverQueue,(char *) initData, SIZE, 0);
-    mq_receive(queue,(char *) initData, SIZE, NULL);
+    mq_send(serverQueue,(char *) initData, SIZE, initData->mtype);
+    printf("Send request\n");
+    int x = mq_receive(queue,(char *) initData, SIZE, NULL);
+    if(x == -1)
+    {
+        printf("Couldn't create client - bad response.\n");
+        exit(1);
+    }
+
+    printf("Received response\n");
 
     if(initData->client_id == -1)
     {
@@ -179,31 +178,28 @@ int main()
         }
 
         // to Server
-
         printf("Write command:");
         if(fgets(input, MAXBUFFER, stdin) != NULL)
         {
             int n = sscanf(input, "%s %s %[^\n]s", command, id, message);
             if (n == 1 && strcmp(command, "STOP") == 0)
             {
-                printf( "STOP command\n");
-
-
+                printf( "Sending STOP command\n");
                 sendStop();
             }
             else if (n == 1 && strcmp(command, "LIST") == 0)
             {
-                printf("Received LIST command\n");
+                printf("Sending LIST command\n");
                 sendList();
             }
             else if (n == 2 && strcmp(command, "2ALL") == 0)
             {
-                printf("Received 2ALL command with message: %s\n", id);
+                printf("Sending 2ALL command with message: %s\n", id);
                 send2all(id);
             }
             else if (n == 3 && strcmp(command, "2ONE") == 0)
             {
-                printf("Received 2ONE command with message: %s and client ID: %s\n", message, id);
+                printf("Sending 2ONE command with message: %s and client ID: %s\n", message, id);
                 send2one(message, parse(id));
             }
             else
