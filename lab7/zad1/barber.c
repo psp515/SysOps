@@ -10,14 +10,14 @@
 #include <string.h>
 #include "common.h"
 #include <time.h>
-#define TIMEOUT 1000000
+#define TIMEOUT 10
 
 static int sem_queue;
 static int sem_chairs;
 static int sem_barbers;
 static int sem_mutex;
 
-void aquire(int sem) {
+void acquire(int sem) {
     struct sembuf operation = { 0, -1, 0 };
     if(semop(sem, &operation, 1) == -1) {
         perror("aquire");
@@ -33,31 +33,31 @@ void release(int sem) {
 
 void open_semaphores() {
 
-    key_t key = ftok(PROJECT_IDENTIFIER, SEM_QUEUE_FNAME[0]);
+    key_t key = ftok(PROJECT, SEM_QUEUE_FNAME[0]);
     sem_queue = semget(key, 1, 0);
-    key = ftok(PROJECT_IDENTIFIER, SEM_CHAIRS_FNAME[0]);
+    key = ftok(PROJECT, SEM_CHAIRS_FNAME[0]);
     sem_chairs = semget(key, 1, 0);
-    key = ftok(PROJECT_IDENTIFIER, SEM_BARBERS_FNAME[0]);
+    key = ftok(PROJECT, SEM_BARBERS_FNAME[0]);
     sem_barbers = semget(key, 1, 0);
-    key = ftok(PROJECT_IDENTIFIER, SEM_BUFFER_MUTEX_FNAME[0]);
+    key = ftok(PROJECT, SEM_BUFFER_MUTEX_FNAME[0]);
     sem_mutex = semget(key, 1, 0);
 }
 
 int main() {
     srand(time(NULL) + getpid());
 
-    key_t key = ftok(PROJECT_IDENTIFIER, 0);
+    key_t key = ftok(PROJECT, 0);
     int id = shmget(key, SIZE, 0644 | IPC_CREAT);
     char * shared = shmat(id, NULL, 0);
 
     open_semaphores();
 
-    printf("\t[BARBER-%d] Spawned\n", getpid());
+    printf("\tBarber starts working. [BARBER-%d] \n", getpid());
     fflush(stdout);
 
     while (1)
     {
-        aquire(sem_barbers);
+        acquire(sem_barbers);
         release(sem_mutex);
 
         if(strlen(shared) > 0) {
@@ -66,13 +66,12 @@ int main() {
 
             release(sem_mutex);
 
-            printf("\t[BARBER-%d] Processing hairuct no. %d\n", getpid(), haircut);
+            printf("\tProcessing haircut no. %d. [BARBER-%d RUNNING]\n", haircut, getpid());
             fflush(stdout);
 
-            int sleep = haircut * 1000;
-            usleep(sleep);
+            sleep(haircut);
 
-            printf("\t[BARBER-%d] Done with hairuct no. %d\n", getpid(), haircut);
+            printf("\tHaircut finished haircut no. %d. [BARBER-%d RUNNING]\n", haircut, getpid());
             fflush(stdout);
 
             release(sem_chairs);
@@ -81,15 +80,16 @@ int main() {
         }
         else
         {
-            usleep(TIMEOUT);
+            sleep(TIMEOUT);
             if (strlen(shared) == 0)
                 break;
         }
     }
 
-    shmdt(id);
+    shmdt(&id);
 
-    printf("\t[BARBER-%d] Finished work.\n", getpid());
+    printf("\tBarber finished work, goes to home. [BARBER-%d STOP] \n", getpid());
+    fflush(stdout);
 
     return 0;
 }

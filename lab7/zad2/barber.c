@@ -3,14 +3,16 @@
 //
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/sem.h>
 #include <unistd.h>
-#include <sys/ipc.h>
-#include <sys/shm.h>
 #include <string.h>
 #include "common.h"
 #include <time.h>
-#define TIMEOUT 1000000
+#include "semaphore.h"
+#include <sys/mman.h>
+#include <fcntl.h>
+
+
+#define TIMEOUT 10
 
 static sem_t* sem_queue;
 static sem_t* sem_chairs;
@@ -22,19 +24,19 @@ void open_semaphores()
 {
     sem_queue = sem_open(SEM_QUEUE_FNAME, 0);
     sem_chairs = sem_open(SEM_CHAIRS_FNAME, 0);
-    sem_barbers = sem_open(SEM_BARBERS_FNAME,, 0);
+    sem_barbers = sem_open(SEM_BARBERS_FNAME, 0);
     sem_mutex = sem_open(SEM_BUFFER_MUTEX_FNAME, 0);
 }
 
 int main() {
     srand(time(NULL) + getpid());
 
-    int descriptor = shm_open(filename, O_RDWR, 0644);
+    int descriptor = shm_open(PROJECT, O_RDWR, 0644);
     char *shared = (char*) mmap(0, SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, descriptor, 0);
 
     open_semaphores();
 
-    printf("\t[BARBER-%d] Spawned\n", getpid());
+    printf("\tBarber starts working. [BARBER-%d] \n", getpid());
     fflush(stdout);
 
     while (1)
@@ -48,13 +50,12 @@ int main() {
 
             sem_post(sem_mutex);
 
-            printf("\t[BARBER-%d] Processing hairuct no. %d\n", getpid(), haircut);
+            printf("\tProcessing haircut no. %d. [BARBER-%d RUNNING]\n", haircut, getpid());
             fflush(stdout);
 
-            int sleep = haircut * 1000;
-            usleep(sleep);
+            sleep(haircut);
 
-            printf("\t[BARBER-%d] Done with hairuct no. %d\n", getpid(), haircut);
+            printf("\tHaircut finished haircut no. %d. [BARBER-%d RUNNING]\n", haircut, getpid());
             fflush(stdout);
 
             sem_post(sem_chairs);
@@ -63,7 +64,7 @@ int main() {
         }
         else
         {
-            usleep(TIMEOUT);
+            sleep(TIMEOUT);
             if (strlen(shared) == 0)
                 break;
         }
@@ -71,7 +72,8 @@ int main() {
 
     munmap(shared, SIZE);
 
-    printf("\t[BARBER-%d] Finished work.\n", getpid());
+    printf("\tBarber finished work, goes to home. [BARBER-%d STOP] \n", getpid());
+    fflush(stdout);
 
     return 0;
 }

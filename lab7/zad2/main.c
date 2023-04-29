@@ -1,28 +1,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <sys/sem.h>
-#include <sys/ipc.h>
-#include <sys/shm.h>
 #include <string.h>
-#include <errno.h>
-
+#include <sys/mman.h>
+#include <fcntl.h>
+#include <semaphore.h>
+#include <sys/wait.h>
 #include "common.h"
-
-int parse(char* string)
-{
-    char *endptr;
-    int value = strtod(string, &endptr);
-    if (errno == ERANGE) {
-        printf("Value out of range for double\n");
-        exit(1);
-    }
-    else if (*endptr != '\0') {
-        printf("Invalid input: '%s'\n", endptr);
-        exit(1);
-    }
-    return value;
-}
 
 static sem_t* sem_queue;
 static sem_t* sem_chairs;
@@ -36,7 +20,8 @@ int main(int n, char* args[]) {
 
     if(n != 5)
     {
-        printf("Invalid number of arguemnts\n");
+        printf("---- Invalid number of arguemnts. [SIMULATION ERROR] ----\n");
+        fflush(stdout);
         return 1;
     }
 
@@ -45,59 +30,70 @@ int main(int n, char* args[]) {
     int clients = parse(args[3]);
     //int queue = parse(args[4]);
 
-    int descriptor = shm_open(PROJECT_IDENTIFIER, O_CREAT | O_RDWR, 0644);
-    ftruncate(descriptor, SIZE);
+    int descriptor = shm_open(PROJECT, O_CREAT | O_RDWR, 0644);
+    //ftruncate(descriptor, SIZE);
     char *shared = (char*) mmap(0, SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, descriptor, 0);
 
     shared[0] = '\0';
 
     create_semaphores(chairs);
 
+    printf("---- Simulation starts. [SIMULATION] ----\n");
+    fflush(stdout);
+
     for(int i = 0; i < barbers; i++)
         if (fork() == 0)
-            execl("barber", "barber", NULL);
+            execl("build/barber", "barber", NULL);
 
-    printf("Spawned all barbers.\n");
+    printf("---- Spawned all barbers. [SIMULATION RUNNING] ----\n");
     fflush(stdout);
+
     for(int i = 0; i < clients; i++)
         if (fork() == 0)
-            execl("client", "client", args[4], NULL);
+            execl("build/client", "client", args[4], NULL);
 
-    printf("Spawned all customers.\n");
+    printf("---- Spawned all customers. [SIMULATION RUNNING] ----\n");
     fflush(stdout);
 
+    printf("---- Waiting for children finish. [SIMULATION RUNNING] ----\n");
+    fflush(stdout);
     while(wait(NULL) > 0);
+    printf("---- All children finished. [SIMULATION RUNNING] ----\n");
+    fflush(stdout);
 
-    shm_unlink(PROJECT_IDENTIFIER);
+    shm_unlink(PROJECT);
 
     remove_semaphores();
+
+    printf("---- Simulation succesfully finished. [SIMULATION STOP] ----\n");
+    fflush(stdout);
 
     return 0;
 }
 
 void create_semaphores(int chairs) {
 
-    sem_open(sem_queue, O_CREAT | O_EXCL, 0644, chairs)
+    sem_queue = sem_open(SEM_QUEUE_FNAME, O_EXCL | O_CREAT, 0644, chairs);
     if (sem_queue == SEM_FAILED) {
-        perror("Creating a semaphore failed.");
+        perror("---- Failed creating semaphore. [SIMULATION ERROR] ----\n");
         exit(1);
     }
 
-    sem_open(sem_chairs, O_CREAT | O_EXCL, 0644, 0)
+    sem_chairs = sem_open(SEM_CHAIRS_FNAME, O_EXCL | O_CREAT, 0644, 0);
     if (sem_chairs == SEM_FAILED) {
-        perror("Creating a semaphore failed.");
+        perror("---- Failed creating semaphore. [SIMULATION ERROR] ----\n");
         exit(1);
     }
 
-    sem_open(sem_barbers, O_CREAT | O_EXCL, 0644, 0)
+    sem_barbers = sem_open(SEM_BARBERS_FNAME, O_EXCL | O_CREAT, 0644, 0);
     if (sem_barbers == SEM_FAILED) {
-        perror("Creating a semaphore failed.");
+        perror("---- Failed creating semaphore. [SIMULATION ERROR] ----\n");
         exit(1);
     }
 
-    sem_open(sem_mutex, O_CREAT | O_EXCL, 0644, 1)
+    sem_mutex = sem_open(SEM_BUFFER_MUTEX_FNAME, O_EXCL | O_CREAT, 0644, 1);
     if (sem_mutex == SEM_FAILED) {
-        perror("Creating a semaphore failed.");
+        perror("---- Failed creating semaphore. [SIMULATION ERROR] ----\n");
         exit(1);
     }
 }
