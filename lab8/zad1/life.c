@@ -19,7 +19,10 @@ int main()
 
 	init_grid(foreground);
 
-	create_threads();
+    printf("Life starts in 4 seconds...\n");
+    fflush(stdout);
+
+    sleep(4);
 
 	while (true)
 	{

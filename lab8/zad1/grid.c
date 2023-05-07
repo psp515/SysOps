@@ -3,36 +3,33 @@
 #include <time.h>
 #include <ncurses.h>
 #include <pthread.h>
+#include <signal.h>
+#include <unistd.h>
 
 #define FIELDS 900
-
-const int grid_width = 30;
-const int grid_height = 30;
-
-static int threads_finished = 0;
-static int calculate = 0;
 pthread_t* threads;
-int* thread_calculated;
-
-static char* internal_src;
-static char* internal_dst;
+char *fg;
+char *bg;
 
 struct threadData
 {
     int i;
     int j;
-} ThreadData;
+    int idx;
+};
+
+const int grid_width = 30;
+const int grid_height = 30;
 
 char *create_grid()
 {
     return malloc(sizeof(char) * grid_width * grid_height);
 }
-
 void destroy_grid(char *grid)
 {
     free(grid);
+    free(threads);
 }
-
 void draw_grid(char *grid)
 {
     for (int i = 0; i < grid_height; ++i)
@@ -56,10 +53,52 @@ void draw_grid(char *grid)
     refresh();
 }
 
+void* worker(void* arg)
+{
+    struct threadData *data = (struct threadData *) arg;
+    //printf("Starting: %d, %d, %d\n", data->idx,data->i, data->j);
+    //fflush(stdout);
+
+    pause();
+
+    while(1)
+    {
+        bg[data->idx] = is_alive(data->i, data->j, fg);
+        pause();
+    }
+
+    return 0;
+}
+void pass(){}
 void init_grid(char *grid)
 {
     for (int i = 0; i < grid_width * grid_height; ++i)
         grid[i] = rand() % 2 == 0;
+
+    struct threadData *data = malloc(FIELDS* sizeof(struct threadData));
+    threads = malloc(FIELDS * sizeof(pthread_t));
+
+    // Set for all threads
+    struct sigaction sigact;
+    sigemptyset(&sigact.sa_mask);
+    sigact.sa_flags = 0;
+    sigact.sa_handler = pass;
+    sigaction(SIGUSR1, &sigact, NULL);
+
+    for(int i = 0; i < grid_height; i++)
+    {
+        for(int j = 0; j < grid_width; j++)
+        {
+            int idx = i*grid_height + j;
+            data[idx].i = i;
+            data[idx].j = j;
+            data[idx].idx = idx;
+
+            pthread_t id;
+            pthread_create(&id, NULL, worker, (void *) &data[idx]);
+            threads[idx] = id;
+        }
+    }
 }
 
 bool is_alive(int row, int col, char *grid)
@@ -102,49 +141,20 @@ bool is_alive(int row, int col, char *grid)
             return false;
     }
 }
-
 void update_grid(char *src, char *dst)
 {
-    internal_src = src;
-    internal_dst = dst;
-    threads_finished = 0;
-    calculate = 1;
+    fg = src;
+    bg = dst;
 
-    while(threads_finished != grid_height* grid_width);
-}
-
-void* thread_work(struct threadData data)
-{
-    int idx = data.i * grid_width + data.j;
-
-    while(1)
+    for (int i = 0; i < FIELDS; i++)
     {
-        if(calculate == 0)
+        int error = pthread_kill(threads[i], SIGUSR1);
+        if(error != 0)
         {
-            thread_calculated[1] = 0;
-            continue;
+            perror("SIgnal sending error. Thread error.");
+            exit(1);
         }
-        
-        if(thread_calculated[1] == 1)
-            continue;
-        
-        internal_dst[idx] = is_alive(data.i, data.j, internal_src);
-        thread_calculated[1] = 1;
-        threads_finished++;
     }
 }
 
-void create_threads()
-{
-    threads = malloc(sizeof(pthread_t) * FIELDS);
-    thread_calculated = malloc(sizeof(int) * FIELDS);
 
-    for(int i = 0; i < grid_height; i++)
-        for(int j = 0; j < grid_width; j++)
-        {
-            struct threadData data = {i, j};
-            pthread_t thread;
-            pthread_create(&thread, NULL, thread_work, (void *) data);
-            threads[i*grid_height + j] = thread;
-        }
-}
