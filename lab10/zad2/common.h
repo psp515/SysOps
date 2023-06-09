@@ -1,7 +1,7 @@
 
 
 #define MAX_BACKLOG 10
-#define MAX_CLIENTS 10
+#define TOTAL_CLIENTS 10
 #define PING_TIMEOUT 5
 #define LINE_MAX 1024
 

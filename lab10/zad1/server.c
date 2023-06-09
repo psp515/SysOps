@@ -17,10 +17,10 @@
 
 #include "common.h"
 
-struct pollfd fds[2 + MAX_CLIENTS];
+struct pollfd fds[2 + TOTAL_CLIENTS];
 char *port;
 char *path;
-char *clients[MAX_CLIENTS];
+char *clients[TOTAL_CLIENTS];
 
 pthread_t ping_thread;
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -97,7 +97,7 @@ void kill_server()
     char *msg = "STOP; Server has been stopped.";
 
     pthread_mutex_lock(&mutex);
-    for (int i = 2; i < 2 + MAX_CLIENTS; i++)
+    for (int i = 2; i < 2 + TOTAL_CLIENTS; i++)
         if (fds[i].fd != -1 && send(fds[i].fd, msg, strlen(msg) + 1, 0) == -1)
             perror("SERVER STOP: Send error");
        
@@ -121,7 +121,7 @@ void *pinger()
     {
         sleep(PING_TIMEOUT);
         pthread_mutex_lock(&mutex);
-        for (int i = 2; i < 2 + MAX_CLIENTS; i++)
+        for (int i = 2; i < 2 + TOTAL_CLIENTS; i++)
         {
             if (fds[i].fd != -1)
             {
@@ -174,7 +174,7 @@ void handle_message(char *buffer, int client_id)
     {
         char msg[LINE_MAX];
         sprintf(msg, "LIST;Client list:");
-        for (int i = 0; i < MAX_CLIENTS; i++)
+        for (int i = 0; i < TOTAL_CLIENTS; i++)
             if (clients[i] != NULL)
                 sprintf(msg + strlen(msg), "\n%s", clients[i]);
 
@@ -190,7 +190,7 @@ void handle_message(char *buffer, int client_id)
 
         sprintf(msg, "ALL;Message from %s: %s\nTime: %s", clients[client_id], message, time_str);
 
-        for (int i = 2; i < 2 + MAX_CLIENTS; i++)
+        for (int i = 2; i < 2 + TOTAL_CLIENTS; i++)
             if (fds[i].fd != -1 && i - 2 != client_id)
                 if (send(fds[i].fd, msg, strlen(msg) + 1, 0) == -1)
                     perror("SERVER SEND: Send  error");
@@ -205,7 +205,7 @@ void handle_message(char *buffer, int client_id)
         sprintf(message, "ONE;Message from %s: %s\nTime: %s", clients[client_id], msg, time_str);
 
         int found = 0;
-        for (int i = 0; i < MAX_CLIENTS; i++)
+        for (int i = 0; i < TOTAL_CLIENTS; i++)
             if (clients[i] != NULL && strcmp(clients[i], name) == 0)
             {
                 if (send(fds[i + 2].fd, message, strlen(message) + 1, 0) == -1)
@@ -256,7 +256,7 @@ int main(int argc, char **argv)
     fds[1].fd = local_socket;
     fds[1].events = POLLIN;
 
-    for (int i = 2; i < 2 + MAX_CLIENTS; i++)
+    for (int i = 2; i < 2 + TOTAL_CLIENTS; i++)
         fds[i].fd = -1;
 
     printf("SERVER: Running!\n");
@@ -266,7 +266,7 @@ int main(int argc, char **argv)
 
     while (1)
     {
-        int res = poll(fds, 2 + MAX_CLIENTS, -1);
+        int res = poll(fds, 2 + TOTAL_CLIENTS, -1);
         if (res == -1)
             perror("SERVER: Poll error");
         
@@ -292,7 +292,7 @@ int main(int argc, char **argv)
                 }
 
                 int exists = 0;
-                for(int i = 0; i < MAX_CLIENTS; i++)
+                for(int i = 0; i < TOTAL_CLIENTS; i++)
                     if (clients[i - 2] != NULL && strcmp(clients[i - 2], buffer) == 0)
                     {
                         exists = 1;
@@ -310,9 +310,9 @@ int main(int argc, char **argv)
                     break;
                 
                 int j = 2;
-                while (j < 2 + MAX_CLIENTS && fds[j].fd != -1) j++;
+                while (j < 2 + TOTAL_CLIENTS && fds[j].fd != -1) j++;
                 
-                if (j == 2 + MAX_CLIENTS)
+                if (j == 2 + TOTAL_CLIENTS)
                 {
                     char *response = "STOP;Server is full! Try again later.";
                     if (send(client_socket, response, strlen(response) + 1, 0) == -1)
@@ -337,7 +337,7 @@ int main(int argc, char **argv)
             }
         }
 
-        for (int i = 2; i < 2 + MAX_CLIENTS; i++)
+        for (int i = 2; i < 2 + TOTAL_CLIENTS; i++)
         {
             if (fds[i].revents & POLLIN && fds[i].fd != -1)
             {

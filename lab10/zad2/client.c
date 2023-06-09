@@ -20,6 +20,7 @@ int socket_fd;
 char *ip = NULL;
 char *port = NULL;
 char *unixpath = NULL;
+char* clientpath = NULL;
 char *name = NULL;
 int totalArgs = 0;
 
@@ -37,7 +38,11 @@ void exit_handler()
     close(socket_fd);
 
     if (totalArgs == 3)
+    {
+        unlink(clientpath);
         free(unixpath);
+        free(clientpath);
+    }
     else
     {
         free(ip);
@@ -49,7 +54,7 @@ void exit_handler()
     exit(0);
 }
 
-void handle_response(char *response)
+void handler(char *response)
 {   
     char *command = strtok(response, ";");
 
@@ -87,10 +92,10 @@ void* receiver()
     {
         memset(response, 0, LINE_MAX);
 
-        if (read(socket_fd, response, LINE_MAX) == -1)
+        if (recv(socket_fd, response, LINE_MAX, MSG_DONTWAIT) == -1)
             perror("CLIENT: Read error");
         
-        handle_response(response);
+        handler(response);
     }
 }
 
@@ -104,7 +109,11 @@ int main(int argc, char **argv)
         unixpath = malloc(strlen(argv[2]) + 1);
         strcpy(unixpath, argv[2]);
 
-        socket_fd = socket(AF_UNIX, SOCK_STREAM, 0);
+        clientpath = malloc(strlen(argv[2]) + strlen(argv[1]) + 1);
+        strcpy(clientpath, argv[2]);
+        strcat(clientpath, argv[1]);
+
+        socket_fd = socket(AF_UNIX, SOCK_DGRAM, 0);
 
         if (socket_fd == -1)
         {
@@ -112,13 +121,23 @@ int main(int argc, char **argv)
             exit(1);
         }
 
-        struct sockaddr_un server_address;
-        server_address.sun_family = AF_UNIX;
-        strcpy(server_address.sun_path, unixpath);
+        struct sockaddr_un addr;
+        addr.sun_family = AF_UNIX;
+        strcpy(addr.sun_path, unixpath);
 
-        if (connect(socket_fd, (struct sockaddr *)&server_address, sizeof(server_address)) == -1)
+        struct sockaddr_un client_addr;
+        client_addr.sun_family = AF_UNIX;
+        strcpy(client_addr.sun_path, clientpath);
+
+        // Bind to local socket
+        if (bind(socket_fd, (const struct sockaddr *)&client_addr, sizeof(client_addr)) == -1)
         {
-            perror("connect");
+            printf("Error while binding\n");
+            exit(1);
+        }
+
+        if (connect(socket_fd, (const struct sockaddr *)&addr, sizeof(addr)) == -1)
+        {
             printf("Error while connecting\n");
             exit(1);
         }
@@ -132,24 +151,25 @@ int main(int argc, char **argv)
         ip = malloc(strlen(argv[3]) + 1);
         strcpy(ip, argv[3]);
 
-        socket_fd = socket(AF_INET, SOCK_STREAM, 0);
+        socket_fd = socket(AF_INET, SOCK_DGRAM, 0);
 
         if (socket_fd == -1)
         {
             printf("Error while creating socket\n");
             exit(1);
         }
+        
+        struct sockaddr_in addr;
+        addr.sin_family = AF_INET;
+        addr.sin_port = htons(atoi(port));
+        addr.sin_addr.s_addr = inet_addr(ip);
 
-        struct sockaddr_in server_address;
-        server_address.sin_family = AF_INET;
-        server_address.sin_port = htons(atoi(port));
-        inet_pton(AF_INET, ip, &server_address.sin_addr);
-
-        if (connect(socket_fd, (struct sockaddr *)&server_address, sizeof(server_address)) == -1)
+        if (connect(socket_fd, (const struct sockaddr *)&addr, sizeof(addr)) == -1)
         {
             printf("Error while connecting\n");
             exit(1);
         }
+
     }
     else
     {

@@ -5,10 +5,10 @@
 struct pollfd fds[2];
 char *port;
 char *path;
-char *client_names[MAX_CLIENTS];
-int client_fds[MAX_CLIENTS];
-socklen_t client_sizes[MAX_CLIENTS] = {0};
-struct sockaddr_in *clients[MAX_CLIENTS];
+char *client_names[TOTAL_CLIENTS];
+int client_fds[TOTAL_CLIENTS];
+socklen_t client_sizes[TOTAL_CLIENTS] = {0};
+struct sockaddr_in *clients[TOTAL_CLIENTS];
 
 pthread_t ping_thread;
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -75,7 +75,7 @@ void kill_server(int signo)
     pthread_mutex_lock(&mutex);
 
     // Send to all connected clients
-    for (int j = 0; j < MAX_CLIENTS; j++)
+    for (int j = 0; j < TOTAL_CLIENTS; j++)
     {
         if (client_fds[j] == -1)
         {
@@ -112,7 +112,7 @@ void *ping_clients()
 
         pthread_mutex_lock(&mutex);
         // Send to all connected clients
-        for (int j = 0; j < MAX_CLIENTS; j++)
+        for (int j = 0; j < TOTAL_CLIENTS; j++)
         {
             if (client_fds[j] == -1)
             {
@@ -127,8 +127,6 @@ void *ping_clients()
                     free(client_names[j]);
                 client_names[j] = NULL;
                 client_fds[j] = -1;
-                // free(clients[j]);
-                // clients[j] = NULL;
                 printf(stdout, "Client %d disconnected\n", j);
             }
         }
@@ -155,7 +153,7 @@ void handle_message(char *buffer, struct sockaddr_in *cliaddr, int fd_index, soc
 
         // Check if client is already registered
         int client_exists = 0;
-        for (int j = 0; j < MAX_CLIENTS; j++)
+        for (int j = 0; j < TOTAL_CLIENTS; j++)
         {
             if (client_fds[j] != -1 && strcmp(client_names[j], client_name) == 0)
             {
@@ -173,12 +171,12 @@ void handle_message(char *buffer, struct sockaddr_in *cliaddr, int fd_index, soc
 
         // Save client to clients array
         int j = 0;
-        while (j < MAX_CLIENTS && clients[j]->sin_addr.s_addr != 0)
+        while (j < TOTAL_CLIENTS && clients[j]->sin_addr.s_addr != 0)
         {
             j++;
         }
 
-        if (j == MAX_CLIENTS)
+        if (j == TOTAL_CLIENTS)
         {
             strcpy(response, "STOPServer is full. Please try again later!");
             sendto(fds[fd_index].fd, (const char *)response, strlen(response) + 1, 0, (const struct sockaddr *)cliaddr, cliaddr_size);
@@ -207,7 +205,7 @@ void handle_message(char *buffer, struct sockaddr_in *cliaddr, int fd_index, soc
     // Find client in clients array
     int client_index = -1;
 
-    for (int j = 0; j < MAX_CLIENTS; j++)
+    for (int j = 0; j < TOTAL_CLIENTS; j++)
     {
         // Compare sockaddr_in structs using memcmp
         if (client_fds[j] != -1 && memcmp(clients[j], cliaddr, cliaddr_size) == 0)
@@ -255,7 +253,7 @@ void handle_message(char *buffer, struct sockaddr_in *cliaddr, int fd_index, soc
     {
         // Print list of clients
         printf("List of clients:\n");
-        for (int j = 0; j < MAX_CLIENTS; j++)
+        for (int j = 0; j < TOTAL_CLIENTS; j++)
         {
             if (client_fds[j] != -1 && clients[j]->sin_addr.s_addr != 0)
             {
@@ -265,7 +263,7 @@ void handle_message(char *buffer, struct sockaddr_in *cliaddr, int fd_index, soc
 
         // // Send list of clients
         strcpy(response, "LISTClient list:");
-        for (int j = 0; j < MAX_CLIENTS; j++)
+        for (int j = 0; j < TOTAL_CLIENTS; j++)
         {
             if (client_fds[j] != -1 && clients[j]->sin_addr.s_addr != 0)
             {
@@ -283,7 +281,7 @@ void handle_message(char *buffer, struct sockaddr_in *cliaddr, int fd_index, soc
         char *message = strtok(buffer + 4, "");
         sprintf(message_to_send, "2ALLMessage from %s: %s\nTime: %s", client_names[client_index], message, time_str);
 
-        for (int j = 0; j < MAX_CLIENTS; j++)
+        for (int j = 0; j < TOTAL_CLIENTS; j++)
         {
             if (client_fds[j] != -1 && clients[j]->sin_addr.s_addr != 0 && j != client_index)
             {
@@ -305,7 +303,7 @@ void handle_message(char *buffer, struct sockaddr_in *cliaddr, int fd_index, soc
         char *message_to_send = calloc(LINE_MAX + 100, sizeof(char));
         sprintf(message_to_send, "2ONEMessage from %s: %s\nTime: %s", client_names[client_index], message, time_str);
 
-        for (int j = 0; j < MAX_CLIENTS; j++)
+        for (int j = 0; j < TOTAL_CLIENTS; j++)
         {
             if (client_fds[j] != -1 && clients[j]->sin_addr.s_addr != 0 && strcmp(client_names[j], name) == 0)
             {
@@ -339,17 +337,11 @@ int main(int argc, char *argv[])
     port = argv[1];
     path = argv[2];
 
-    // Register signal handlers
-    struct sigaction act;
-    act.sa_handler = kill_server;
-    sigemptyset(&act.sa_mask);
-    act.sa_flags = 0;
-    sigaction(SIGINT, &act, NULL);
+    signal(SIGINT, kill_server);
 
     int network_socket = init_network_socket(port);
     int local_socket = init_local_socket(path);
 
-    // Initialize fds
     fds[0].fd = network_socket;
     fds[0].events = POLLIN;
     fds[1].fd = local_socket;
@@ -358,7 +350,7 @@ int main(int argc, char *argv[])
     struct sockaddr_in cliaddr;
     char buffer[LINE_MAX];
 
-    for (int i = 0; i < MAX_CLIENTS; i++)
+    for (int i = 0; i < TOTAL_CLIENTS; i++)
     {
         clients[i] = calloc(1, sizeof(struct sockaddr_in));
         client_fds[i] = -1;
@@ -366,9 +358,6 @@ int main(int argc, char *argv[])
     }
 
     printf("Server listening on port %s...\n", port);
-
-    // Initialize ping thread
-    // pthread_create(&ping_thread, NULL, ping_clients, NULL);
 
     while (1)
     {

@@ -16,7 +16,7 @@
 #include <limits.h>
 
 #define MAX_BACKLOG 10
-#define MAX_CLIENTS 10
+#define TOTAL_CLIENTS 10
 #define PING_TIMEOUT 5
 
 #ifndef MSG_CONFIRM

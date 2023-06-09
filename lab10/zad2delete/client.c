@@ -7,34 +7,7 @@ char *path = NULL;
 char *client_unixpath = NULL;
 int is_local = 0;
 
-int trim(char *str)
-{
-    int i = strlen(str) - 1;
-    while (i >= 0 && isspace(str[i]))
-    {
-        str[i] = '\0';
-        i--;
-    }
 
-    i = 0;
-    while (i < strlen(str) && isspace(str[i]))
-    {
-        i++;
-    }
-
-    // Modify string
-    int j = 0;
-    while (i < strlen(str))
-    {
-        str[j] = str[i];
-        i++;
-        j++;
-    }
-
-    str[j] = '\0';
-
-    return i;
-}
 
 void handle_response(char *response)
 {
