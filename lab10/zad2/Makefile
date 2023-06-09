@@ -15,10 +15,10 @@ server: compile_server
 	./build/server 8333 \tmp\sock2
 
 client: compile_client
-	./build/client tmp \tmp\sock2
+	./build/client tmp 12345 127.0.0.1
 
 client2: compile_client
-	./build/client tmp2 \tmp\sock2
+	./build/client tmp2 12345 127.0.0.1
 
 clean:
 	rm -rf _.* *.so *.gch *.o *.a build *.txt

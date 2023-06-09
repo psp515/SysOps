@@ -345,7 +345,7 @@ int main(int argc, char *argv[])
     fds[0].fd = network_socket;
     fds[0].events = POLLIN;
     fds[1].fd = local_socket;
-    fds[1].events = POLLIN;
+    fds[1].events = POLLIN; 
 
     struct sockaddr_in cliaddr;
     char buffer[LINE_MAX];

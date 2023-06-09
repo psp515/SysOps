@@ -1,265 +1,195 @@
-#include <netdb.h>
-#include <poll.h>
-#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/socket.h>
-#include <sys/un.h>
-#include <arpa/inet.h>
-#include <time.h>
 #include <unistd.h>
+#include <arpa/inet.h>
 #include <signal.h>
-#include <ctype.h>
-#include <errno.h>
-#include <pthread.h>
-#include <limits.h>
 
-#include "common.h"
+#define MAX_CLIENTS 10
+#define BUFFER_SIZE 1024
 
-struct pollfd fds[2 + TOTAL_CLIENTS];
-char *port;
-char *path;
-char *clients[TOTAL_CLIENTS];
 
-pthread_t ping_thread;
-pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+// uwaga operacje 2all i 2one wybmagaja uzycia id klienta ! 
 
-int init_network_socket(char *port)
+
+typedef struct {
+    char name[20];
+    struct sockaddr_in address;
+} Client;
+
+int serverSocket;
+Client activeClients[MAX_CLIENTS];
+
+void kill_server(int signo)
 {
-    int network_socket;
-    struct sockaddr_in server_address;
+   char stopMessage[] = "STOP";
+    for (int i = 0; i < MAX_CLIENTS; i++) 
+        sendto(serverSocket, stopMessage, sizeof(stopMessage), 0, (struct sockaddr *)&activeClients[i].address, sizeof(activeClients[i].address));
+        
+    close(serverSocket);
 
-    network_socket = socket(AF_INET, SOCK_STREAM, 0);
-    if (network_socket == -1)
-    {
-        perror("SERVER INIT ERROR: Socket error");
-        exit(1);
-    }
+    exit(EXIT_SUCCESS);
 
-    server_address.sin_family = AF_INET;
-    server_address.sin_port = htons(atoi(port));
-    server_address.sin_addr.s_addr = INADDR_ANY;
-
-    if (bind(network_socket, (struct sockaddr *)&server_address, sizeof(server_address)) == -1)
-    {
-        perror("SERVER INIT ERROR: bind error");
-        exit(1);
-    }
-
-    if (listen(network_socket, MAX_BACKLOG) == -1)
-    {
-        perror("SERVER INIT ERROR: listen error");
-        exit(1);
-    }
-
-    return network_socket;
-}
-
-int init_local_socket(char *path)
-{
-    if (strlen(path) > UNIX_PATH_MAX)
-    {
-        perror("SERVER INIT ERROR: Path is too long.\n");
-        exit(1);
-    }
-
-    int local_socket;
-    struct sockaddr_un server_address;
-
-    local_socket = socket(AF_UNIX, SOCK_STREAM, 0);
-    if (local_socket == -1)
-    {
-        perror("SERVER INIT ERROR:  socket error");
-        exit(1);
-    }
-
-    server_address.sun_family = AF_UNIX;
-    strcpy(server_address.sun_path, path);
-
-    if (bind(local_socket, (struct sockaddr *)&server_address, sizeof(server_address)) == -1)
-    {
-        perror("SERVER INIT ERROR: bind error");
-        exit(1);
-    }
-
-    if (listen(local_socket, MAX_BACKLOG) == -1)
-    {
-        perror("SERVER INIT ERROR: listen error");
-        exit(1);
-    }
-
-    return local_socket;
-}
-
-void kill_server()
-{
-    char *msg = "STOP; Server has been stopped.";
-
-    pthread_mutex_lock(&mutex);
-    for (int i = 2; i < 2 + TOTAL_CLIENTS; i++)
-        if (fds[i].fd != -1 && send(fds[i].fd, msg, strlen(msg) + 1, 0) == -1)
-            perror("SERVER STOP: Send error");
-       
-    shutdown(fds[0].fd, SHUT_RDWR);
-    close(fds[0].fd);
-    shutdown(fds[1].fd, SHUT_RDWR);
-    close(fds[1].fd);
-
-    unlink(path);
-    pthread_mutex_unlock(&mutex);
-
-    printf("\nSERVER STOP: Server is off...\n");
-    fflush(stdout);
+    printf("\nServer is shutting down...\n");
     exit(0);
 }
 
-void handle_message(char *buffer, int client_id)
-{
-    time_t t = time(NULL);
-    struct tm tm = *localtime(&t);
-    char time_str[20];
-    sprintf(time_str, "%d-%02d-%02d %02d:%02d:%02d", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
 
-    FILE *log_file = fopen("log.txt", "a");
-    fprintf(log_file, "TIME: %s FROM: %s DATA: %s\n", time_str, clients[client_id], buffer);
-    fclose(log_file);
-    
-    char tmpBuff[LINE_MAX+1];
-    memcpy(tmpBuff, buffer, strlen(buffer) + 1);
 
-    char *command = strtok(buffer, ";");
-    if (strcmp("PONG", command) == 0)
-        return;
+int main() {
+    struct sockaddr_in serverAddress, clientAddress;
+    socklen_t clientAddressLength = sizeof(clientAddress);
+    char buffer[BUFFER_SIZE];
+    int numClients = 0;
 
-    printf("TIME: %s FROM: %s DATA: %s\n", time_str, clients[client_id], tmpBuff);
-
-    if (strcmp("LIST", command) == 0)
-    {
-        char response[LINE_MAX];
-        sprintf(response, "LIST;Client list:");
-        for (int i = 0; i < TOTAL_CLIENTS; i++)
-            if (clients[i] != NULL)
-                sprintf(response + strlen(response), "\n%s", clients[i]);
-
-        sprintf(response + strlen(response), ";");
-
-        if (send(fds[client_id + 2].fd, response, strlen(response) + 1, 0) == -1)
-            perror("SERVER SEND: Send list error");
-    }
-    else if (strcmp("ONE", command) == 0)
-    {
-        char *name = strtok(NULL, ";");
-        char *message = strtok(NULL, "\n");
-
-        char response[LINE_MAX + 100];
-        sprintf(response, "ONE;Message from %s: %s\nTime: %s", clients[client_id], message, time_str);
-
-        int found = 0;
-        for (int i = 0; i < TOTAL_CLIENTS; i++)
-            if (clients[i] != NULL && strcmp(clients[i], name) == 0)
-            {
-                if (send(fds[i + 2].fd, response, strlen(response) + 1, 0) == -1)
-                    perror("SERVER SEND: Send  error");
-                found = 1;
-                break;
-            }
-            
-        if (!found)
-        {
-            char *msg = "ERROR;Client not found";
-            if (send(fds[client_id + 2].fd, msg, strlen(msg) + 1, 0) == -1)
-                perror("SERVER SEND: Send  error");
-
-        }
-    }
-    else if (strcmp("ALL", command) == 0)
-    {
-        char *message = strtok(NULL, "\n");
-        char response[LINE_MAX + 100];
-
-        sprintf(response, "ALL;Message from %s: %s\nTime: %s", clients[client_id], message, time_str);
-
-        for (int i = 2; i < 2 + TOTAL_CLIENTS; i++)
-            if (fds[i].fd != -1 && i - 2 != client_id)
-                if (send(fds[i].fd, response, strlen(response) + 1, 0) == -1)
-                    perror("SERVER SEND: Send  error");
-                     
-    }
-    else if (strcmp("STOP", command) == 0)
-    {
-        fds[client_id + 2].fd = -1;
-        clients[client_id] = NULL;
-    }
-    else
-    {
-        if (send(fds[client_id + 2].fd, "ERROR;Unknown command", strlen("Unknown command") + 1, 0) == -1)
-            perror("SERVER SEND: Send  error");   
-    }
-}
-
-int main(int argc, char **argv)
-{
-    if (argc != 3)
-    {
-        printf("Usage: %s <port> <path>\n", argv[0]);
-        fflush(stdout);
-        exit(1);
+    // Tworzenie gniazda serwera
+    serverSocket = socket(AF_INET, SOCK_DGRAM, 0);
+    if (serverSocket == -1) {
+        perror("Błąd podczas tworzenia gniazda serwera");
+        exit(EXIT_FAILURE);
     }
 
-    port = argv[1];
-    path = argv[2];
+    // Inicjalizacja adresu serwera
+    serverAddress.sin_family = AF_INET;
+    serverAddress.sin_addr.s_addr = INADDR_ANY;
+    serverAddress.sin_port = htons(12345);
+
+    // Powiązanie gniazda serwera z adresem
+    if (bind(serverSocket, (struct sockaddr *)&serverAddress, sizeof(serverAddress)) == -1) {
+        perror("Błąd podczas powiązywania gniazda serwera z adresem");
+        exit(EXIT_FAILURE);
+    }
 
     signal(SIGINT, kill_server);
 
-    int network_socket = init_network_socket(port);
-    int local_socket = init_local_socket(path);
-
-    fds[0].fd = network_socket;
-    fds[0].events = POLLIN;
-    fds[1].fd = local_socket;
-    fds[1].events = POLLIN;
-
-    for (int i = 2; i < 2 + TOTAL_CLIENTS; i++)
-        fds[i].fd = -1;
-
-    printf("SERVER: Running!\n");
-    fflush(stdout);
-
-    while (1)
-    {
-        int res = poll(fds, 2 + TOTAL_CLIENTS, -1);
-        if (res == -1)
-            perror("SERVER: Poll error");
-        
-        pthread_mutex_lock(&mutex);
-
-        for (int i = 0; i < 2; i++)
-        {
-            if (fds[i].revents & POLLIN)
-            {
-                socklen_t cliaddr_size;
-                char buffer[LINE_MAX];
-                int n = recvfrom(fds[i].fd, (char *)buffer, LINE_MAX, MSG_DONTWAIT, (struct sockaddr *)&cliaddr, &cliaddr_size);
-
-                if (n == -1)
-                {
-                    if (errno == EAGAIN || errno == EWOULDBLOCK)
-                    {
-                        continue;
-                    }
-
-                    perror("recvfrom");
-                }
-
-                handle_message(buffer, &cliaddr, i, cliaddr_size);
-
-                fds[i].revents = 0;
-            }
+    while (1) {
+        // Odbieranie wiadomości od klienta
+        memset(buffer, 0, sizeof(buffer));
+        ssize_t bytesRead = recvfrom(serverSocket, buffer, sizeof(buffer), 0,
+                                     (struct sockaddr *)&clientAddress, &clientAddressLength);
+        if (bytesRead == -1) {
+            perror("Błąd podczas odbierania wiadomości");
+            continue;
         }
 
-        pthread_mutex_unlock(&mutex);
+        // Obsługa wiadomości od klienta
+        if (strncmp(buffer, "LIST", 4) == 0) {
+            // Zlecenie wypisania listy aktywnych klientów
+            printf("Zlecenie LIST\n");
+
+            // Wysyłanie listy aktywnych klientów do klienta
+            char clientList[MAX_CLIENTS * 20];
+            memset(clientList, 0, sizeof(clientList));
+            memcpy(clientList, "LIST ", 5);
+            for (int i = 0; i < numClients; i++) {
+                strcat(clientList, activeClients[i].name);
+                strcat(clientList, " ");
+            }
+
+            //rintf("Lista: %s\n", clientList);
+
+            ssize_t bytesSent = sendto(serverSocket, clientList, strlen(clientList), 0, (struct sockaddr *)&clientAddress, clientAddressLength);
+
+            if (bytesSent == -1) {
+                perror("Błąd podczas wysyłania listy aktywnych klientów");
+                continue;
+            }
+        } 
+        else if (strncmp(buffer, "2ALL", 4) == 0) {
+            // Zlecenie wysłania komunikatu do wszystkich klientów
+            printf("Zlecenie 2ALL\n");
+
+            // Przesyłanie komunikatu do wszystkich klientów
+            for (int i = 0; i < numClients; i++) {
+                if (memcmp(&clientAddress, &(activeClients[i].address), sizeof(clientAddress)) != 0) {
+                    ssize_t bytesSent = sendto(serverSocket, buffer , strlen(buffer), 0,
+                                               (struct sockaddr *)&(activeClients[i].address),
+                                               sizeof(activeClients[i].address));
+                    if (bytesSent == -1) {
+                        perror("Błąd podczas wysyłania komunikatu do klienta");
+                        continue;
+                    }
+                }
+            }
+        } else if (strncmp(buffer, "2ONE", 4) == 0) {
+            // Zlecenie wysłania komunikatu do konkretnego klienta
+            printf("Zlecenie 2ONE\n");
+ 
+            // Wyszukiwanie klienta o podanym identyfikatorze
+            char *spacePos = strchr(buffer + 5, ' ');
+            if (spacePos != NULL) {
+                int clientId = atoi(buffer + 5);
+                for (int i = 0; i < numClients; i++) {
+                    if (memcmp(&clientAddress, &(activeClients[i].address), sizeof(clientAddress)) != 0) {
+                        if (clientId == i) {
+                            ssize_t bytesSent = sendto(serverSocket, spacePos + 1, strlen(spacePos + 1), 0,
+                                                       (struct sockaddr *)&(activeClients[i].address),
+                                                       sizeof(activeClients[i].address));
+                            if (bytesSent == -1) {
+                                perror("Błąd podczas wysyłania komunikatu do klienta");
+                                continue;
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+        } else if (strncmp(buffer, "STOP", 4) == 0) {
+            // Zgłoszenie zakończenia pracy klienta
+            printf("Zgłoszenie STOP\n");
+
+            // Usuwanie klienta z listy aktywnych klientów
+            for (int i = 0; i < numClients; i++) {
+                if (memcmp(&clientAddress, &(activeClients[i].address), sizeof(clientAddress)) == 0) {
+                    memmove(&(activeClients[i]), &(activeClients[i + 1]), sizeof(Client) * (numClients - i - 1));
+                    numClients--;
+                    break;
+                }
+            }
+        } 
+        else if (strncmp(buffer, "INIT", 4) == 0) {
+            // Inicjalizacja klienta
+            printf("Zlecenie INIT\n");
+
+            // Sprawdzanie, czy nazwa klienta jest unikalna
+            int uniqueName = 1;
+            for (int i = 0; i < numClients; i++) {
+                if (memcmp(buffer + 5, activeClients[i].name, strlen(buffer + 5)) == 0) {
+                    uniqueName = 0;
+                    break;
+                }
+            }
+
+            // Tworzenie odpowiedzi dla klienta
+            char response[10];
+            memset(response, 0, sizeof(response));
+
+            if (uniqueName && numClients < MAX_CLIENTS) {
+                strcpy(activeClients[numClients].name, buffer + 5);
+                memcpy(&(activeClients[numClients].address), &clientAddress, sizeof(clientAddress));
+                numClients++;
+                strcpy(response, "OK");
+            } 
+            else 
+            {
+                strcpy(response, "STOP");
+            }
+
+            // Wysyłanie odpowiedzi do klienta
+            ssize_t bytesSent = sendto(serverSocket, response, strlen(response), 0, (struct sockaddr *)&clientAddress, clientAddressLength);
+            if (bytesSent == -1) {
+                perror("Błąd podczas wysyłania odpowiedzi");
+                continue;
+            }
+        }
+        else
+        {
+            printf("Nieznane polecenie od klienta: %s\n %s", inet_ntoa(clientAddress.sin_addr), buffer);
+        }
     }
+
+    // Zamknięcie gniazda serwera
+    close(serverSocket);
 
     return 0;
 }
