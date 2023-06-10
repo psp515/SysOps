@@ -12,7 +12,7 @@ compile_client: dir client.c
 	$(cc) build/client.o -o build/client -lpthread
 
 server: compile_server
-	./build/server 8333 \tmp\sock2
+	./build/server 12345 \tmp\sock1234554
 
 client: compile_client
 	./build/client tmp 12345 127.0.0.1

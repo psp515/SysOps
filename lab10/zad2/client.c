@@ -16,6 +16,7 @@ char *ip = NULL;
 char *port = NULL;
 char *unixpath = NULL;
 char *name = NULL;
+char* clientpath = NULL;
 
 struct sockaddr_in sockaddr_storage;
 socklen_t serverAddressLength;
@@ -23,14 +24,26 @@ socklen_t serverAddressLength;
 void exit_handler()
 {
     char * command = "STOP ";
-    if (sendto(clientSocket, command, strlen(command), 0, (struct sockaddr *)&sockaddr_storage, serverAddressLength))
-    {
-        printf("CLIENT: Error while sending command\n");
-        exit(1);
-    }
+
+    sendto(clientSocket, command, strlen(command), 0, (struct sockaddr *)&sockaddr_storage, serverAddressLength);
+
+    kill(getppid(), SIGINT);
 
     shutdown(clientSocket, SHUT_RDWR);
     close(clientSocket);
+
+    free(name);
+    if(totalArgs == 3)
+    {
+        unlink(unixpath);
+        free(unixpath);
+        free(clientpath);
+    }
+    else
+    {
+        free(ip);
+        free(port);
+    }
 
     printf("CLIENT: Shut down\n");
     exit(0);
@@ -48,6 +61,10 @@ int main(int argc, char **argv) {
         unixpath = malloc(strlen(argv[2]) + 1);
         strcpy(unixpath, argv[2]);
 
+        clientpath = malloc(strlen(argv[1]) + strlen(argv[3]) + 1);
+        strcpy(clientpath, argv[3]);
+        strcat(clientpath, argv[1]);
+
         clientSocket = socket(AF_UNIX, SOCK_STREAM, 0);
 
         if (clientSocket == -1)
@@ -58,10 +75,16 @@ int main(int argc, char **argv) {
 
         struct sockaddr_un unixAddress;
         unixAddress.sun_family = AF_UNIX;
-        strncpy(unixAddress.sun_path, unixpath, sizeof(unixAddress.sun_path) - 1);
+        strncpy(unixAddress.sun_path, clientpath, sizeof(unixAddress.sun_path) - 1);
         serverAddressLength = sizeof(struct sockaddr_un);
 
         memcpy(&sockaddr_storage, &unixAddress, serverAddressLength);
+
+        if (bind(clientSocket, (const struct sockaddr *)&unixAddress, sizeof(unixAddress)) == -1)
+        {
+            perror("bind error");
+            exit(1);
+        }
 
     }
     else if(argc == 4)
@@ -97,7 +120,7 @@ int main(int argc, char **argv) {
 
     snprintf(buffer, sizeof(buffer), "INIT;%s", name);
 
-    ssize_t bytesSent = sendto(clientSocket, buffer, strlen(buffer), 0, (struct sockaddr *)&sockaddr_storage, serverAddressLength);
+    sendto(clientSocket, buffer, strlen(buffer), 0, (struct sockaddr *)&sockaddr_storage, serverAddressLength);
     
     signal(SIGINT, exit_handler);
 
@@ -142,7 +165,6 @@ int main(int argc, char **argv) {
             if (strncmp(buffer, "STOP", 4) == 0) 
             {
                 exit_handler();
-                break;
             }
 
             ssize_t bytesSent = sendto(clientSocket, buffer, strlen(buffer), 0, (struct sockaddr *)&sockaddr_storage, serverAddressLength);
@@ -152,9 +174,6 @@ int main(int argc, char **argv) {
             }
         }
     }
-
-    // Zamknięcie gniazda klienta
-    close(clientSocket);
 
     return 0;
 }

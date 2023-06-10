@@ -74,7 +74,21 @@ void handle_response(char *response)
     else if (strncmp(response, "STOP", 4) == 0)
     {
         printf("SERVER: Shut down\n");
-        exit_handler();
+        kill(getppid(), SIGINT);
+        shutdown(socket_fd, SHUT_RDWR);
+        close(socket_fd);
+
+        if (totalArgs == 3)
+            free(unixpath);
+        else
+        {
+            free(ip);
+            free(port);
+        }
+
+        free(name);
+        printf("CLIENT: Shut down\n");
+        exit(0);
     }
     else
         printf("Response: Unknown response\n");

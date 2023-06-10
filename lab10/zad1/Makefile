@@ -15,7 +15,7 @@ server: compile_server
 	./build/server 8333 \tmp\sock2
 
 client: compile_client
-	./build/client tmp \tmp\sock2
+	./build/client tmp 8333 127.0.0.1
 
 client2: compile_client
 	./build/client tmp2 \tmp\sock2
