@@ -1,6 +1,6 @@
 <div align="center">
   
-  <h1> Sys Op </h1>
+  <h1> Sys Ops </h1>
   <p> System operation, data decoded👾👾... </p>
   
   <div>
